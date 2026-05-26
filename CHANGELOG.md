@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-26
+
+### Added
+- **Exporteitor Feature** — Advanced export opportunity analyzer for Optional PvP servers
+  - **Browse Mode** — Discover and analyze profitable export opportunities
+    - View all profitable items to export from source server to Optional PvP targets
+    - Filter by item name (client-side, instant search), category, minimum profit %, minimum activity, and minimum server count
+    - Sort by profit % (list/instant), activity, server count, price (low/high), or item name
+    - Expandable rows showing detailed target server prices (sell/buy) and market activity
+    - Only displays items with positive profit margins (losses excluded)
+    - Real-time data freshness indicator with color-coded status (green/yellow/red)
+  - **Export Plan Mode** — Automated export calculator with ROI analysis
+    - Auto-selects optimal target server based on highest total profit potential
+    - Calculates complete transfer economics with 750 Tibia Coins cost
+    - Configurable Tibia Coins price (default: 35,000 gp)
+    - Generates comprehensive shopping list sorted by profit per item
+    - Displays summary metrics: total items, investment, gross profit, transfer cost, net profit, ROI %
+    - Shows both listing profit (sell_offer) and instant sell profit (buy_offer) for each item
+  - **Smart Server Filtering** — Only Optional PvP servers, excludes blocked servers
+  - **Data Freshness Display** — Shows when market data was last scanned with tooltip
+  - **Responsive UI** — Mobile-friendly design with collapsible filters
+  - **Clear Filters Button** — Quick reset for all active filters
+- **New API Endpoint** — `GET /api/export/opportunities`
+  - Query parameters: `source_server_id` (required), `item_name` (optional)
+  - Returns profitable export opportunities with detailed pricing and target server data
+  - Calculates average sell/buy prices across Optional PvP servers
+  - Computes profit margins for both listing and instant selling strategies
+  - Excludes blocked servers and source server from target list
+  - Sorted by total market activity (descending)
+- **New React Components**
+  - `src/pages/Exporteitor.jsx` — Main Exporteitor page with dual view modes
+  - `src/hooks/useExportOpportunities.js` — Custom hook for fetching export data
+- **Updated Navigation** — Added Exporteitor to sidebar with Package icon
+
+### Changed
+- **Client-Side Filtering** — Item name filter now works client-side for instant results (no API lag)
+- **API Response Format** — Export opportunities include both `avg_sell_price` and `avg_buy_price`
+- **Source Price Logic** — Uses `sell_offer` (what you pay to buy) instead of `buy_offer`
+
+### Technical Details
+- Transfer cost calculation: 750 TC × configurable TC price
+- Profit calculation: `(target_price - source_price) / source_price × 100`
+- Only processes items with `sell_offer > 0` on source server
+- Target servers must have `sell_offer > 0` OR `buy_offer > 0`
+- Color-coded profit indicators: Green (≥30%), Yellow (≥15%), Gray (≥0%), Red (<0%)
+- Data age calculation: Shows minutes/hours/days since last API update
+
 ## [0.1.1] - 2026-05-26
 
 ### Added

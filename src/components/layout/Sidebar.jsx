@@ -1,10 +1,10 @@
 import PropTypes from 'prop-types'
-import { Server, TrendingUp, Home } from 'lucide-react'
+import { Server, TrendingUp, Home, Package } from 'lucide-react'
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: Home },
   { id: 'servers', label: 'Server Browser', icon: Server },
-  { id: 'feature2', label: 'Features', icon: TrendingUp }
+  { id: 'exporteitor', label: 'Exporteitor', icon: Package }
 ]
 
 function Sidebar({ currentPage, onNavigate }) {

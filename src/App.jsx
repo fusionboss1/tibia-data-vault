@@ -3,6 +3,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import Sidebar from './components/layout/Sidebar'
 import Dashboard from './pages/Dashboard'
 import Servers from './pages/Servers'
+import Exporteitor from './pages/Exporteitor'
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard')
@@ -18,6 +19,7 @@ function App() {
         <div className="flex-1">
           {currentPage === 'dashboard' && <Dashboard />}
           {currentPage === 'servers' && <Servers />}
+          {currentPage === 'exporteitor' && <Exporteitor />}
         </div>
       </div>
     </ErrorBoundary>

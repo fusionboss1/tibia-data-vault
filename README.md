@@ -4,12 +4,26 @@ A web application for browsing and managing Tibia game server data.
 
 ## Version
 
-Current version: 0.1.1
+Current version: 0.2.0
 
 See [CHANGELOG.md](CHANGELOG.md) for version history and changes.
 
 ## Features
 
+- **Exporteitor**: Advanced export opportunity analyzer for Optional PvP servers
+  - **Browse Mode**: Discover profitable items to export between servers
+    - Filter by item name, category, minimum profit %, activity, and server count
+    - Sort by profit (list/instant), activity, server count, price, or name
+    - View detailed target server prices and market activity
+    - Real-time data freshness indicator
+  - **Export Plan Mode**: Automated export calculator
+    - Auto-selects best target server based on total profit potential
+    - Calculates ROI with transfer costs (750 Tibia Coins)
+    - Generates complete shopping list with profit analysis
+    - Shows gross profit, transfer cost, and net profit
+  - Only shows profitable opportunities (positive profit margins)
+  - Excludes blocked servers from all calculations
+  - Client-side filtering for instant search results
 - **Global Market Dashboard**: Real-time market statistics for key Tibia items
   - Average buy/sell prices across all servers
   - Server coverage and offer counts
@@ -69,10 +83,12 @@ tibia-data-vault/
 │   │   └── ErrorBoundary.jsx
 │   ├── pages/              # Page-level components
 │   │   ├── Dashboard.jsx
-│   │   └── Servers.jsx
+│   │   ├── Servers.jsx
+│   │   └── Exporteitor.jsx
 │   ├── hooks/              # Custom React hooks
 │   │   ├── useServers.js
 │   │   ├── useMarketData.js
+│   │   ├── useExportOpportunities.js
 │   │   └── useFilters.js
 │   ├── utils/              # Utility functions
 │   │   └── formatters.js
@@ -334,6 +350,60 @@ Returns aggregated global market data for key items (Tibia Coins, Gold Token, Si
   }
 }
 ```
+
+### Export Opportunities
+
+#### GET /api/export/opportunities
+Returns export opportunities from a source server to Optional PvP servers.
+
+**Query Parameters:**
+- `source_server_id` — Source server ID (required)
+- `item_name` — Filter by item name (optional, partial match)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "source_server_id": 7,
+    "source_server_name": "Bravoria",
+    "opportunities": [
+      {
+        "item_id": 123,
+        "item_name": "Prismatic Ring",
+        "item_category": "Rings",
+        "source_price": 199975,
+        "source_buy_offers": 5,
+        "source_sell_offers": 3,
+        "avg_sell_price": 169693.23,
+        "avg_buy_price": 129895.00,
+        "profit_sell_pct": -15.14,
+        "profit_buy_pct": -35.04,
+        "total_activity": 1388,
+        "target_server_count": 22,
+        "target_servers": [
+          {
+            "server_id": 2,
+            "server_name": "Antica",
+            "sell_price": 165000,
+            "buy_price": 125000,
+            "buy_offers": 30,
+            "sell_offers": 25
+          }
+        ]
+      }
+    ]
+  },
+  "count": 1394
+}
+```
+
+**Notes:**
+- Only returns items with positive profit margins on listing (sell_price)
+- Excludes blocked servers (servers.notes = 'blocked')
+- Only considers Optional PvP servers as targets
+- Source server is excluded from target list
+- Calculates both listing profit (avg_sell_price) and instant sell profit (avg_buy_price)
 
 ## Database Schema
 
