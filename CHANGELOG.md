@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Feature Flags System
+- **Centralized feature configuration** (`src/constants/features.js`)
+  - `FEATURES` object controls which features are visible in production
+  - `isFeatureEnabled()` helper for conditional rendering
+  - Currently disabled: `INVENTORY` (Stash Inventory still in development)
+  - Released features: `SERVERS`, `EXPORTEITOR`, `WEEKLY_DELIVERY`
+- **Conditional navigation** — Sidebar filters items based on feature flags
+- **Conditional routing** — App.jsx only renders routes for enabled features
+
 ### Added — Weekly Delivery Feature
 
 - **Weekly Delivery Panel** (`src/pages/WeeklyDelivery.jsx`) — Delivery-item lookup and sell/keep decision helper
