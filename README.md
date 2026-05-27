@@ -4,7 +4,7 @@ A web application for browsing and managing Tibia game server data.
 
 ## Version
 
-Current version: 0.2.0 (see [Unreleased] in CHANGELOG for upcoming changes)
+Current version: 0.4.0 (see [Unreleased] in CHANGELOG for upcoming changes)
 
 See [CHANGELOG.md](CHANGELOG.md) for version history and changes.
 

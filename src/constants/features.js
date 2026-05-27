@@ -9,7 +9,7 @@ export const FEATURES = {
   WEEKLY_DELIVERY: true,
 
   // Features in development (disable for production)
-  INVENTORY: false,  // Stash Inventory - still in development
+  INVENTORY: true,  // Stash Inventory - still in development
 }
 
 /**

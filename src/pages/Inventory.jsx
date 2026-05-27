@@ -13,7 +13,7 @@ function Inventory() {
   const [selectedCategory, setSelectedCategory] = useState('')
   const [selectedServerId, setSelectedServerId] = useState('')
   const [weeklyOnly, setWeeklyOnly] = useState(false)
-  const [priceFilter, setPriceFilter] = useState('opt_pvp_green')
+  const [priceFilter, setPriceFilter] = useState('opt_pvp')
   const [minLiquidity, setMinLiquidity] = useState(0)
   const [sortKey, setSortKey] = useState('item_name')
   const [sortDir, setSortDir] = useState('asc')
