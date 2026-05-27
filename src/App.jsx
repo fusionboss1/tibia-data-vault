@@ -6,6 +6,7 @@ import Servers from './pages/Servers'
 import Exporteitor from './pages/Exporteitor'
 import WeeklyDelivery from './pages/WeeklyDelivery'
 import Inventory from './pages/Inventory'
+import { isFeatureEnabled } from './constants/features'
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard')
@@ -23,7 +24,7 @@ function App() {
           {currentPage === 'servers' && <Servers />}
           {currentPage === 'exporteitor' && <Exporteitor />}
           {currentPage === 'delivery' && <WeeklyDelivery />}
-          {currentPage === 'inventory' && <Inventory />}
+          {isFeatureEnabled('INVENTORY') && currentPage === 'inventory' && <Inventory />}
         </div>
       </div>
     </ErrorBoundary>
