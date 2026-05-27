@@ -5,4 +5,7 @@ export const API_ENDPOINTS = {
   MARKET_GLOBAL: '/api/market/global-key-items',
   DELIVERY_ITEMS: '/api/delivery/items',
   EXPORT_OPPORTUNITIES: '/api/export/opportunities',
+  INVENTORY: '/api/inventory',
+  INVENTORY_CATEGORIES: '/api/inventory/categories',
+  INVENTORY_IMPORT: '/api/inventory/import',
 }

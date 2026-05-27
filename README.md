@@ -4,7 +4,7 @@ A web application for browsing and managing Tibia game server data.
 
 ## Version
 
-Current version: 0.2.0 (0.3.0 unreleased — see CHANGELOG)
+Current version: 0.2.0 (see [Unreleased] in CHANGELOG for upcoming changes)
 
 See [CHANGELOG.md](CHANGELOG.md) for version history and changes.
 
@@ -105,7 +105,8 @@ tibia-data-vault/
 │   │   ├── useServers.js
 │   │   ├── useMarketData.js
 │   │   ├── useExportOpportunities.js
-│   │   └── useFilters.js
+│   │   ├── useFilters.js
+│   │   └── useWeeklyDeliveryItems.js
 │   ├── utils/              # Utility functions
 │   │   └── formatters.js
 │   ├── constants/          # Application constants
@@ -577,6 +578,7 @@ The frontend follows React best practices with a modular, component-based archit
 - `useServers()` - Fetches server data with loading/error states
 - `useMarketData()` - Fetches market data with loading/error states
 - `useFilters(items)` - Manages filter state with memoized filtering logic
+- `useWeeklyDeliveryItems()` - Fetches weekly delivery items with local and global pricing
 
 **Reusable Components:**
 - **Common**: `LoadingSpinner`, `ErrorMessage`, `FilterInput`, `FilterSelect`

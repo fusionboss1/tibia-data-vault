@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Weekly Delivery Feature
+
+- **Weekly Delivery Panel** (`src/pages/WeeklyDelivery.jsx`) — Delivery-item lookup and sell/keep decision helper
+  - Shows NPC price, imported demand label from TibiaPal, local server price, and global average price
+  - Helps decide whether to sell to NPC, list on the market, or export
+  - Server selector to compare prices across different worlds
+  - Search filter for item names (client-side)
+  - Sortable by source order or item name
+- **Weekly Delivery Import Script** (`scripts/import_weekly_delivery_items.py`)
+  - Scrapes delivery pool from TibiaPal website
+  - Resolves item names to local database IDs using normalized matching
+  - Upserts active items into `weekly_delivery_items` table
+  - Deactivates items no longer in the delivery pool
+  - Supports `--dry-run`, `--verbose`, and custom `--source-url`
+- **New API Endpoint** — `GET /api/delivery/items`
+  - Query params: `server_id` (for local prices), `search` (item name), `active_only` (default: true)
+  - Returns: NPC prices, local server market prices, global averages, demand/supply estimates
+- **New React Hook** — `useWeeklyDeliveryItems.js` for data fetching
+
+### Technical Changes — Python Import Refactoring
+- **Scripts now run as modules** — Changed from `python scripts/fetch_market.py` to `python -m scripts.fetch_market`
+- Created `scripts/__init__.py` to make `scripts` a proper Python package
+- Removed all `sys.path.insert` workarounds from scripts (`fetch_market.py`, `migrate.py`, `import_weekly_delivery_items.py`)
+- Running scripts directly from inside `scripts/` folder no longer works — must run from project root
+
 ### Added — Inventory Manager
 
 #### Core Feature
