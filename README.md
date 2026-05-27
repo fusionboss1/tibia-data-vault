@@ -4,12 +4,20 @@ A web application for browsing and managing Tibia game server data.
 
 ## Version
 
-Current version: 0.2.0
+Current version: 0.2.0 (0.3.0 unreleased — see CHANGELOG)
 
 See [CHANGELOG.md](CHANGELOG.md) for version history and changes.
 
 ## Features
 
+- **Stash Inventory Manager**: Track your in-game stash with rich pricing signals
+  - Import items from server log text (paste Retrieved log lines)
+  - Flat sortable table — click any column header to sort
+  - Per-item pricing signals: NPC buy price, server market buy/sell, global avg buy/sell (all/Optional PvP/Optional PvP+Green BattlEye), top-server reference, vs Global %, data age
+  - **Liquidity Score (0–100)**: composite of market breadth, depth, and data freshness
+  - Summary cards: stash value (buy/sell), global avg buy/sell totals, top-server buy total
+  - Filters: search, category, server, price filter scope, liquidity threshold, weekly-delivery-only toggle
+  - Ambiguous and unmatched item names reported after import
 - **Exporteitor**: Advanced export opportunity analyzer for Optional PvP servers
   - **Browse Mode**: Discover profitable items to export between servers
     - Filter by item name, category, minimum profit %, activity, and server count
@@ -24,6 +32,10 @@ See [CHANGELOG.md](CHANGELOG.md) for version history and changes.
   - Only shows profitable opportunities (positive profit margins)
   - Excludes blocked servers from all calculations
   - Client-side filtering for instant search results
+- **Weekly Delivery Panel**: Delivery-item lookup and sell/keep decision helper
+  - Imports the full delivery pool from TibiaPal into a separate table
+  - Shows NPC price, imported demand label, local server price, and global average price
+  - Helps decide whether to sell to NPC, list on the market, or export
 - **Global Market Dashboard**: Real-time market statistics for key Tibia items
   - Average buy/sell prices across all servers
   - Server coverage and offer counts
@@ -63,7 +75,9 @@ tibia-data-vault/
 │   ├── models.py           # Pydantic data models
 ├── scripts/                # CLI entry points
 │   ├── fetch_market.py     # Market data fetcher from tibiamarket.top
-│   └── migrate.py          # Database migration tool
+│   ├── import_weekly_delivery_items.py  # TibiaPal delivery pool importer
+│   ├── migrate.py          # Database migration tool (core tables)
+│   └── migrate_inventory.py  # Migration for stash_inventory, stash_log_imports, market_summary
 ├── services/               # Business logic services (future expansion)
 │   └── __init__.py
 ├── tests/                  # Test files and sample data
@@ -84,7 +98,9 @@ tibia-data-vault/
 │   ├── pages/              # Page-level components
 │   │   ├── Dashboard.jsx
 │   │   ├── Servers.jsx
-│   │   └── Exporteitor.jsx
+│   │   ├── Exporteitor.jsx
+│   │   ├── Inventory.jsx
+│   │   └── WeeklyDelivery.jsx
 │   ├── hooks/              # Custom React hooks
 │   │   ├── useServers.js
 │   │   ├── useMarketData.js
@@ -163,6 +179,12 @@ Use `scripts/fetch_market.py` to pull market data from the [tibiamarket.top API]
 ```bash
 # Fetch specific servers
 python scripts/fetch_market.py --name Antica Secura
+
+# Import the weekly delivery pool from TibiaPal
+python scripts/import_weekly_delivery_items.py
+
+# Set up inventory tables (required before using Inventory Manager)
+python -m scripts.migrate_inventory
 
 # Fetch by region
 python scripts/fetch_market.py --region EU
@@ -351,6 +373,44 @@ Returns aggregated global market data for key items (Tibia Coins, Gold Token, Si
 }
 ```
 
+### Inventory
+
+#### GET /api/inventory
+Returns stash inventory with full pricing signals.
+
+**Query Parameters:**
+- `search` — Partial item name match
+- `category` — Filter by item category
+- `server_id` — Server ID for live market prices
+- `weekly_only` — `1` to show only active weekly delivery items
+- `price_filter` — `all` | `opt_pvp` | `opt_pvp_green` (controls which precomputed avg columns are returned; default `all`)
+
+**Response fields per item:** `id`, `item_id`, `item_name`, `quantity`, `category`, `tier`, `best_npc_buy_price`, `best_npc_sell_price`, `market_buy_offer`, `market_sell_offer`, `server_buy_orders`, `server_sell_orders`, `price_age_hours`, `global_servers`, `active_servers`, `global_avg_buy`, `global_avg_sell`, `opt_pvp_avg_buy`, `opt_pvp_avg_sell`, `opt_pvp_green_avg_buy`, `opt_pvp_green_avg_sell`, `vs_global_pct`, `top_server_name`, `top_server_buy`, `top_server_sell`, `opt_pvp_top_server_name`, `opt_pvp_top_server_buy`, `opt_pvp_top_server_sell`, `opt_pvp_green_top_server_name`, `opt_pvp_green_top_server_buy`, `opt_pvp_green_top_server_sell`, `total_value`, `total_value_sell`
+
+#### GET /api/inventory/categories
+Returns distinct categories of items currently in the stash.
+
+#### POST /api/inventory/import
+Parses server log text and **replaces** quantities for matched items in `stash_inventory` (upsert by `item_id` — not additive).
+
+**Request body:**
+```json
+{ "log_text": "19:00:00 Retrieved 3x Gold Coin.\n..." }
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "items_imported": 17,
+    "unmatched_names": ["Unknown Item"],
+    "ambiguous_names": ["Cookbook"]
+  },
+  "message": "Imported 17 items, 1 unmatched, 1 ambiguous (best guess used)"
+}
+```
+
 ### Export Opportunities
 
 #### GET /api/export/opportunities
@@ -446,6 +506,48 @@ Returns export opportunities from a source server to Optional PvP servers.
 - Same columns as `market_current` plus `id` (auto-increment)
 - Records historical snapshots
 - Foreign keys with ON DELETE CASCADE
+
+#### `stash_inventory`
+Created by `scripts/migrate_inventory.py`.
+- `id`: Primary key (auto-increment)
+- `item_id`: FK to `items` (ON DELETE SET NULL)
+- `item_name`: TEXT NOT NULL COLLATE NOCASE — denormalized item name
+- `quantity`: INTEGER DEFAULT 0 CHECK >= 0
+- `last_import_id`: FK to `stash_log_imports` (ON DELETE SET NULL)
+- `updated_at`: DATETIME DEFAULT now
+- Unique index on `item_name COLLATE NOCASE`
+
+#### `stash_log_imports`
+Created by `scripts/migrate_inventory.py`. Audit log of raw import pastes (stored but not currently queried by the API).
+- `id`: Primary key (auto-increment)
+- `raw_text`: TEXT NOT NULL — full pasted log
+- `imported_at`: DATETIME DEFAULT now
+- `lines_parsed`: INTEGER DEFAULT 0
+- `items_found`: INTEGER DEFAULT 0
+- `notes`: TEXT (optional)
+
+#### `market_summary`
+Precomputed per-item global market aggregates, rebuilt by `scripts/fetch_market.py` after each server fetch via `INSERT OR REPLACE`. **Must be pre-created before first use** — run `scripts/migrate_inventory.py`.
+
+All averages are **activity-weighted** (`SUM(price × activity) / SUM(activity)`, where activity = `buy_offers + sell_offers`).
+- `item_id`: Primary key (FK to `items`)
+- `global_servers`: Total servers carrying this item
+- `active_servers`: Servers with `buy_offers + sell_offers > 0`
+- `top_server_id / top_server_buy / top_server_sell / top_activity`: Most active server globally (ties broken by MIN server_id)
+- `global_avg_buy / global_avg_sell`: Activity-weighted averages, all servers
+- `opt_pvp_avg_buy / opt_pvp_avg_sell`: Activity-weighted averages, Optional PvP servers only
+- `opt_pvp_green_avg_buy / opt_pvp_green_avg_sell`: Activity-weighted averages, Optional PvP + Green BattlEye
+- `opt_pvp_top_server_id / _buy / _sell`: Most active Optional PvP server per item
+- `opt_pvp_green_top_server_id / _buy / _sell`: Most active Optional PvP + Green BattlEye server per item
+- `updated_at`: Last rebuild timestamp
+
+#### `weekly_delivery_items`
+- `item_id`: Primary key (FK to `items`)
+- `is_active`: Whether item is currently in the delivery pool
+- `source_order`: Position in source delivery list
+- `source_market_value`: Market value label from TibiaPal
+- `notes`: Free-text notes
+- `added_at / updated_at`: Timestamps
 
 ### Indexes
 - `idx_market_history_item_time` — For item price history queries

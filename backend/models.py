@@ -57,6 +57,19 @@ class Item(BaseModel):
     best_npc_buy_npcs: Optional[str] = None
 
 
+class WeeklyDeliveryItem(BaseModel):
+    """Weekly delivery pool entry for an item."""
+    model_config = ConfigDict(from_attributes=True)
+
+    item_id: int
+    is_active: bool = True
+    source_order: Optional[int] = None
+    source_market_value: Optional[str] = None
+    notes: Optional[str] = None
+    added_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
 class MarketCurrent(BaseModel):
     """Current market data for an item on a specific server."""
     model_config = ConfigDict(from_attributes=True)
@@ -82,6 +95,35 @@ class MarketHistory(BaseModel):
     sell_offer: int = Field(ge=0)
     buy_offers: int = Field(ge=0)
     sell_offers: int = Field(ge=0)
+
+
+class StashInventoryItem(BaseModel):
+    """A single item in the stash inventory."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    item_id: int
+    item_name: str
+    quantity: int
+    updated_at: Optional[datetime] = None
+    category: Optional[str] = None
+    tier: Optional[int] = None
+    best_npc_buy_price: Optional[int] = None
+    best_npc_buy_npcs: Optional[str] = None
+    best_npc_sell_price: Optional[int] = None
+    best_npc_sell_npcs: Optional[str] = None
+
+
+class StashImportRequest(BaseModel):
+    """Request body for importing a log paste."""
+    log_text: str
+
+
+class StashImportResult(BaseModel):
+    """Result summary after a log import."""
+    items_imported: int
+    unmatched_names: list[str] = []
+    ambiguous_names: list[str] = []
 
 
 class ApiResponse(BaseModel):

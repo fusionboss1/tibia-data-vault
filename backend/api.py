@@ -5,6 +5,7 @@ Provides REST endpoints for accessing Tibia game data.
 """
 
 import logging
+import re
 import sqlite3
 from datetime import datetime
 
@@ -22,7 +23,7 @@ from backend import (
     LOG_LEVEL,
     LOG_FORMAT,
 )
-from backend.models import Server, Item, MarketCurrent, ApiResponse, ErrorResponse
+from backend.models import Server, Item, MarketCurrent, ApiResponse, ErrorResponse, StashImportRequest, StashImportResult
 
 # Configure logging
 logging.basicConfig(level=getattr(logging, LOG_LEVEL), format=LOG_FORMAT)
@@ -471,6 +472,113 @@ def get_global_key_items():
 
 
 # =============================================================================
+# Weekly Delivery Items
+# =============================================================================
+
+@app.route('/api/delivery/items', methods=['GET'])
+def get_weekly_delivery_items():
+    """
+    Get weekly delivery pool items with local server prices and global market stats.
+
+    Query parameters:
+    - server_id: Optional server ID to show local market prices
+    - search: Search by item name (optional, partial match)
+    - active_only: Return only active delivery items (default true)
+    """
+    server_id = request.args.get('server_id', type=int)
+    search = request.args.get('search', '').strip()
+    active_only = request.args.get('active_only', 'true').lower() != 'false'
+
+    try:
+        with get_db() as conn:
+            selected_server = None
+            if server_id:
+                cursor = conn.execute(
+                    "SELECT id, name FROM servers WHERE id = ?",
+                    (server_id,)
+                )
+                selected_server = cursor.fetchone()
+                if not selected_server:
+                    raise NotFound(f"Server with ID {server_id} not found")
+
+            query = """
+                WITH global_stats AS (
+                    SELECT
+                        item_id,
+                        ROUND(AVG(NULLIF(sell_offer, 0)), 2) AS global_avg_sell_price,
+                        ROUND(AVG(NULLIF(buy_offer, 0)), 2) AS global_avg_buy_price,
+                        COALESCE(SUM(buy_offers), 0) AS estimated_demand,
+                        COALESCE(SUM(sell_offers), 0) AS global_supply,
+                        COALESCE(SUM(buy_offers + sell_offers), 0) AS global_activity,
+                        COUNT(DISTINCT server_id) AS global_server_count
+                    FROM market_current
+                    GROUP BY item_id
+                )
+                SELECT
+                    wdi.item_id,
+                    i.name AS item_name,
+                    i.category AS item_category,
+                    i.tier AS item_tier,
+                    i.wiki_name,
+                    i.best_npc_buy_price,
+                    i.best_npc_buy_npcs,
+                    i.best_npc_sell_price,
+                    i.best_npc_sell_npcs,
+                    COALESCE(i.best_npc_buy_price, i.best_npc_sell_price) AS npc_price,
+                    COALESCE(wdi.is_active, 1) AS is_active,
+                    wdi.source_order,
+                    wdi.source_market_value,
+                    wdi.notes,
+                    wdi.added_at,
+                    wdi.updated_at,
+                    mc.buy_offer AS server_buy_price,
+                    mc.sell_offer AS server_sell_price,
+                    mc.buy_offers AS server_buy_offers,
+                    mc.sell_offers AS server_sell_offers,
+                    mc.time AS server_updated_at,
+                    COALESCE(gs.global_avg_sell_price, 0) AS global_avg_sell_price,
+                    COALESCE(gs.global_avg_buy_price, 0) AS global_avg_buy_price,
+                    COALESCE(gs.estimated_demand, 0) AS estimated_demand,
+                    COALESCE(gs.global_supply, 0) AS global_supply,
+                    COALESCE(gs.global_activity, 0) AS global_activity,
+                    COALESCE(gs.global_server_count, 0) AS global_server_count
+                FROM weekly_delivery_items wdi
+                JOIN items i ON i.id = wdi.item_id
+                LEFT JOIN global_stats gs ON gs.item_id = i.id
+                LEFT JOIN market_current mc ON mc.item_id = i.id AND mc.server_id = ?
+                WHERE 1=1
+            """
+            params = [server_id or 0]
+
+            if active_only:
+                query += " AND wdi.is_active = 1"
+
+            if search:
+                query += " AND i.name LIKE ?"
+                params.append(f"%{search}%")
+
+            query += " ORDER BY COALESCE(wdi.source_order, 999999), i.name"
+
+            cursor = conn.execute(query, params)
+            items = [dict(row) for row in cursor.fetchall()]
+
+            response = ApiResponse(
+                success=True,
+                data={
+                    "server_id": server_id,
+                    "server_name": selected_server["name"] if selected_server else None,
+                    "delivery_items": items
+                },
+                count=len(items)
+            )
+            return jsonify(response.model_dump())
+
+    except sqlite3.Error as e:
+        logger.error(f"Database error in get_weekly_delivery_items: {e}")
+        raise
+
+
+# =============================================================================
 # Exporteitor - Export Opportunities
 # =============================================================================
 
@@ -618,6 +726,262 @@ def get_export_opportunities():
             
     except sqlite3.Error as e:
         logger.error(f"Database error in get_export_opportunities: {e}")
+        raise
+
+
+# =============================================================================
+# Stash Inventory
+# =============================================================================
+
+LOG_LINE_RE = re.compile(
+    r'^\d{2}:\d{2}:\d{2}\s+Retrieved\s+(\d+)x\s+(.+?)\s*\.$',
+    re.IGNORECASE
+)
+
+
+@app.route('/api/inventory', methods=['GET'])
+def get_inventory():
+    """
+    Get the current stash inventory, enriched with item data.
+
+    Query parameters:
+    - search: Filter by item name (partial match)
+    - category: Filter by item category
+    - server_id: Optional server ID to include market prices in best_unit_price
+    """
+    search = request.args.get('search', '').strip()
+    category = request.args.get('category', '').strip()
+    server_id = request.args.get('server_id', type=int)
+    weekly_only = request.args.get('weekly_only', '').lower() in ('1', 'true')
+    price_filter = request.args.get('price_filter', 'all')  # all | opt_pvp | opt_pvp_green
+
+    try:
+        with get_db() as conn:
+            query = """
+                SELECT
+                    si.id,
+                    si.item_id,
+                    si.item_name,
+                    si.quantity,
+                    si.updated_at,
+                    i.category,
+                    i.tier,
+                    i.best_npc_buy_price,
+                    i.best_npc_buy_npcs,
+                    i.best_npc_sell_price,
+                    i.best_npc_sell_npcs,
+                    mc.buy_offer AS market_buy_offer,
+                    mc.sell_offer AS market_sell_offer,
+                    mc.buy_offers AS server_buy_orders,
+                    mc.sell_offers AS server_sell_orders,
+                    mc.time AS price_time,
+                    CAST((strftime('%s', 'now') - mc.time) / 3600.0 AS INTEGER) AS price_age_hours,
+                    ms.global_servers,
+                    ms.active_servers,
+                    ms.global_avg_buy,
+                    ms.global_avg_sell,
+                    ms.opt_pvp_avg_buy,
+                    ms.opt_pvp_avg_sell,
+                    ms.opt_pvp_green_avg_buy,
+                    ms.opt_pvp_green_avg_sell,
+                    CASE
+                        WHEN ms.global_avg_buy > 0 AND mc.buy_offer > 0
+                        THEN ROUND((mc.buy_offer - ms.global_avg_buy) * 100.0 / ms.global_avg_buy, 1)
+                        ELSE NULL
+                    END AS vs_global_pct,
+                    ts.name AS top_server_name,
+                    ms.top_server_buy,
+                    ms.top_server_sell,
+                    ms.top_activity,
+                    ts1.name AS opt_pvp_top_server_name,
+                    ms.opt_pvp_top_server_buy,
+                    ms.opt_pvp_top_server_sell,
+                    ts2.name AS opt_pvp_green_top_server_name,
+                    ms.opt_pvp_green_top_server_buy,
+                    ms.opt_pvp_green_top_server_sell,
+                    si.quantity * CASE
+                        WHEN COALESCE(mc.buy_offer, 0) > COALESCE(i.best_npc_buy_price, 0)
+                        THEN mc.buy_offer
+                        ELSE COALESCE(i.best_npc_buy_price, 0)
+                    END AS total_value,
+                    CASE
+                        WHEN COALESCE(mc.sell_offer, 0) > 0
+                        THEN si.quantity * mc.sell_offer
+                        ELSE NULL
+                    END AS total_value_sell
+                FROM stash_inventory si
+                JOIN items i ON i.id = si.item_id
+                LEFT JOIN market_current mc ON mc.item_id = si.item_id AND mc.server_id = ?
+                LEFT JOIN market_summary ms ON ms.item_id = si.item_id
+                LEFT JOIN servers ts  ON ts.id  = ms.top_server_id
+                LEFT JOIN servers ts1 ON ts1.id = ms.opt_pvp_top_server_id
+                LEFT JOIN servers ts2 ON ts2.id = ms.opt_pvp_green_top_server_id
+                LEFT JOIN weekly_delivery_items wdi ON wdi.item_id = si.item_id
+                WHERE 1=1
+            """
+            params = [server_id or 0]
+
+            if search:
+                query += " AND si.item_name LIKE ?"
+                params.append(f"%{search}%")
+
+            if category:
+                query += " AND i.category = ?"
+                params.append(category)
+
+            if weekly_only:
+                query += " AND wdi.item_id IS NOT NULL AND wdi.is_active = 1"
+
+            query += " ORDER BY i.category, si.item_name"
+
+            cursor = conn.execute(query, params)
+            items = [dict(row) for row in cursor.fetchall()]
+
+            cursor = conn.execute(
+                "SELECT COUNT(*) as count FROM stash_inventory"
+            )
+            total = cursor.fetchone()["count"]
+
+            grand_total_value = sum(item["total_value"] or 0 for item in items)
+
+            response = ApiResponse(
+                success=True,
+                data={
+                    "inventory": items,
+                    "total_items": total,
+                    "grand_total_value": grand_total_value,
+                    "server_id": server_id
+                },
+                count=len(items)
+            )
+            return jsonify(response.model_dump())
+
+    except sqlite3.Error as e:
+        logger.error(f"Database error in get_inventory: {e}")
+        raise
+
+
+@app.route('/api/inventory/import', methods=['POST'])
+def import_inventory():
+    """
+    Parse a pasted server log and replace the entire stash inventory.
+
+    Body (JSON):
+    - log_text: raw text from the server log file
+    """
+    body = request.get_json(silent=True)
+    if not body or not body.get('log_text', '').strip():
+        raise BadRequest("log_text is required")
+
+    payload = StashImportRequest(log_text=body['log_text'])
+
+    parsed = {}
+    for line in payload.log_text.splitlines():
+        m = LOG_LINE_RE.match(line.strip())
+        if m:
+            qty = int(m.group(1))
+            name = m.group(2).strip().lower()
+            parsed[name] = parsed.get(name, 0) + qty
+
+    if not parsed:
+        raise BadRequest("No valid 'Retrieved' lines found in the provided log text")
+
+    unmatched = []
+    ambiguous = []
+    matched = []
+
+    try:
+        with get_db() as conn:
+            for name, qty in parsed.items():
+                cursor = conn.execute(
+                    """
+                    SELECT i.id, i.category, i.best_npc_buy_price,
+                           COUNT(mc.server_id) AS market_servers
+                    FROM items i
+                    LEFT JOIN market_current mc ON mc.item_id = i.id
+                    WHERE LOWER(i.name) = ?
+                    GROUP BY i.id
+                    ORDER BY
+                        (i.best_npc_buy_price IS NOT NULL) DESC,
+                        (i.category = 'Creature Products') DESC,
+                        market_servers DESC
+                    """,
+                    (name,)
+                )
+                candidates = cursor.fetchall()
+                if not candidates:
+                    unmatched.append(name)
+                    logger.warning(f"Stash import: no items match for '{name}'")
+                    continue
+
+                best = candidates[0]
+                if len(candidates) > 1:
+                    second = candidates[1]
+                    same_npc = (best["best_npc_buy_price"] is not None) == (second["best_npc_buy_price"] is not None)
+                    same_cat = best["category"] == second["category"]
+                    if same_npc and same_cat:
+                        ambiguous.append(name)
+                        logger.warning(f"Stash import: ambiguous match for '{name}' (picked id={best['id']}, category={best['category']})")
+
+                matched.append((best["id"], name, qty))
+
+            conn.executemany(
+                """
+                INSERT INTO stash_inventory (item_id, item_name, quantity, updated_at)
+                VALUES (?, ?, ?, datetime('now'))
+                ON CONFLICT(item_id) DO UPDATE SET
+                    quantity   = excluded.quantity,
+                    item_name  = excluded.item_name,
+                    updated_at = datetime('now')
+                """,
+                matched
+            )
+            conn.commit()
+
+        result = StashImportResult(
+            items_imported=len(matched),
+            unmatched_names=unmatched,
+            ambiguous_names=ambiguous
+        )
+        msg = f"Imported {len(matched)} items"
+        if unmatched:
+            msg += f", {len(unmatched)} unmatched"
+        if ambiguous:
+            msg += f", {len(ambiguous)} ambiguous (best guess used)"
+        response = ApiResponse(
+            success=True,
+            data=result.model_dump(),
+            message=msg
+        )
+        return jsonify(response.model_dump()), 200
+
+    except sqlite3.Error as e:
+        logger.error(f"Database error in import_inventory: {e}")
+        raise
+
+
+@app.route('/api/inventory/categories', methods=['GET'])
+def get_inventory_categories():
+    """Get distinct item categories present in the current stash."""
+    try:
+        with get_db() as conn:
+            cursor = conn.execute("""
+                SELECT DISTINCT i.category
+                FROM stash_inventory si
+                JOIN items i ON i.id = si.item_id
+                ORDER BY i.category
+            """)
+            categories = [row["category"] for row in cursor.fetchall()]
+
+            response = ApiResponse(
+                success=True,
+                data={"categories": categories},
+                count=len(categories)
+            )
+            return jsonify(response.model_dump())
+
+    except sqlite3.Error as e:
+        logger.error(f"Database error in get_inventory_categories: {e}")
         raise
 
 

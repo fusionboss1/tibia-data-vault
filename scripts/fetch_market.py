@@ -218,6 +218,117 @@ def insert_market_history(conn, server_id: int, items: list[dict]) -> int:
         raise
 
 
+def rebuild_market_summary(conn) -> None:
+    """
+    Rebuild the market_summary table from market_current.
+
+    Called after every server upsert so the table always reflects the latest
+    data.  The two subqueries are:
+
+    g  — one row per item with global aggregates (server counts, activity-
+         weighted average buy/sell prices across all servers)
+    t  — one row per item identifying the single most-active server for that
+         item (ties broken by MIN(server_id) inside GROUP BY)
+
+    The result is UPSERTED so partial refreshes (fetching one server at a time)
+    keep accumulating correctly rather than wiping data for untouched items.
+    """
+    try:
+        conn.execute("""
+            INSERT OR REPLACE INTO market_summary (
+                item_id, global_servers, active_servers,
+                top_server_id, top_server_buy, top_server_sell, top_activity,
+                global_avg_buy, global_avg_sell,
+                opt_pvp_avg_buy, opt_pvp_avg_sell,
+                opt_pvp_green_avg_buy, opt_pvp_green_avg_sell,
+                opt_pvp_top_server_id, opt_pvp_top_server_buy, opt_pvp_top_server_sell,
+                opt_pvp_green_top_server_id, opt_pvp_green_top_server_buy, opt_pvp_green_top_server_sell,
+                updated_at
+            )
+            SELECT
+                g.item_id,
+                g.global_servers,
+                g.active_servers,
+                t.server_id,
+                t.buy_offer,
+                t.sell_offer,
+                t.activity,
+                g.global_avg_buy,
+                g.global_avg_sell,
+                g.opt_pvp_avg_buy,
+                g.opt_pvp_avg_sell,
+                g.opt_pvp_green_avg_buy,
+                g.opt_pvp_green_avg_sell,
+                t1.server_id,
+                t1.buy_offer,
+                t1.sell_offer,
+                t2.server_id,
+                t2.buy_offer,
+                t2.sell_offer,
+                datetime('now')
+            FROM (
+                SELECT
+                    mc.item_id,
+                    COUNT(DISTINCT mc.server_id) AS global_servers,
+                    COUNT(DISTINCT CASE WHEN mc.buy_offers + mc.sell_offers > 0 THEN mc.server_id END) AS active_servers,
+                    ROUND(SUM(CASE WHEN mc.buy_offer > 0 THEN CAST(mc.buy_offer AS REAL) * (mc.buy_offers + mc.sell_offers) ELSE 0 END)
+                        / NULLIF(SUM(CASE WHEN mc.buy_offer > 0 THEN mc.buy_offers + mc.sell_offers ELSE 0 END), 0), 0) AS global_avg_buy,
+                    ROUND(SUM(CASE WHEN mc.sell_offer > 0 THEN CAST(mc.sell_offer AS REAL) * (mc.buy_offers + mc.sell_offers) ELSE 0 END)
+                        / NULLIF(SUM(CASE WHEN mc.sell_offer > 0 THEN mc.buy_offers + mc.sell_offers ELSE 0 END), 0), 0) AS global_avg_sell,
+                    ROUND(SUM(CASE WHEN s.pvp_type = 'Optional PvP' AND mc.buy_offer > 0 THEN CAST(mc.buy_offer AS REAL) * (mc.buy_offers + mc.sell_offers) ELSE 0 END)
+                        / NULLIF(SUM(CASE WHEN s.pvp_type = 'Optional PvP' AND mc.buy_offer > 0 THEN mc.buy_offers + mc.sell_offers ELSE 0 END), 0), 0) AS opt_pvp_avg_buy,
+                    ROUND(SUM(CASE WHEN s.pvp_type = 'Optional PvP' AND mc.sell_offer > 0 THEN CAST(mc.sell_offer AS REAL) * (mc.buy_offers + mc.sell_offers) ELSE 0 END)
+                        / NULLIF(SUM(CASE WHEN s.pvp_type = 'Optional PvP' AND mc.sell_offer > 0 THEN mc.buy_offers + mc.sell_offers ELSE 0 END), 0), 0) AS opt_pvp_avg_sell,
+                    ROUND(SUM(CASE WHEN s.pvp_type = 'Optional PvP' AND s.battleye = 'Green' AND mc.buy_offer > 0 THEN CAST(mc.buy_offer AS REAL) * (mc.buy_offers + mc.sell_offers) ELSE 0 END)
+                        / NULLIF(SUM(CASE WHEN s.pvp_type = 'Optional PvP' AND s.battleye = 'Green' AND mc.buy_offer > 0 THEN mc.buy_offers + mc.sell_offers ELSE 0 END), 0), 0) AS opt_pvp_green_avg_buy,
+                    ROUND(SUM(CASE WHEN s.pvp_type = 'Optional PvP' AND s.battleye = 'Green' AND mc.sell_offer > 0 THEN CAST(mc.sell_offer AS REAL) * (mc.buy_offers + mc.sell_offers) ELSE 0 END)
+                        / NULLIF(SUM(CASE WHEN s.pvp_type = 'Optional PvP' AND s.battleye = 'Green' AND mc.sell_offer > 0 THEN mc.buy_offers + mc.sell_offers ELSE 0 END), 0), 0) AS opt_pvp_green_avg_sell
+                FROM market_current mc
+                JOIN servers s ON s.id = mc.server_id
+                GROUP BY mc.item_id
+            ) g
+            JOIN (
+                SELECT mc.item_id, mc.server_id, mc.buy_offer, mc.sell_offer,
+                       mc.buy_offers + mc.sell_offers AS activity
+                FROM market_current mc
+                WHERE mc.buy_offers + mc.sell_offers = (
+                    SELECT MAX(buy_offers + sell_offers)
+                    FROM market_current mx
+                    WHERE mx.item_id = mc.item_id
+                )
+                GROUP BY mc.item_id
+            ) t ON t.item_id = g.item_id
+            LEFT JOIN (
+                SELECT mc.item_id, mc.server_id, mc.buy_offer, mc.sell_offer
+                FROM market_current mc
+                JOIN servers s ON s.id = mc.server_id AND s.pvp_type = 'Optional PvP'
+                WHERE mc.buy_offers + mc.sell_offers = (
+                    SELECT MAX(mc2.buy_offers + mc2.sell_offers)
+                    FROM market_current mc2
+                    JOIN servers s2 ON s2.id = mc2.server_id AND s2.pvp_type = 'Optional PvP'
+                    WHERE mc2.item_id = mc.item_id
+                )
+                GROUP BY mc.item_id
+            ) t1 ON t1.item_id = g.item_id
+            LEFT JOIN (
+                SELECT mc.item_id, mc.server_id, mc.buy_offer, mc.sell_offer
+                FROM market_current mc
+                JOIN servers s ON s.id = mc.server_id AND s.pvp_type = 'Optional PvP' AND s.battleye = 'Green'
+                WHERE mc.buy_offers + mc.sell_offers = (
+                    SELECT MAX(mc2.buy_offers + mc2.sell_offers)
+                    FROM market_current mc2
+                    JOIN servers s2 ON s2.id = mc2.server_id AND s2.pvp_type = 'Optional PvP' AND s2.battleye = 'Green'
+                    WHERE mc2.item_id = mc.item_id
+                )
+                GROUP BY mc.item_id
+            ) t2 ON t2.item_id = g.item_id
+        """)
+        logger.debug("market_summary rebuilt")
+    except sqlite3.Error as e:
+        logger.error(f"Failed to rebuild market_summary: {e}")
+        raise
+
+
 def update_server_timestamps(conn, server_id: int, api_last_update: str, max_item_time: Optional[float]):
     """Update server timestamps after successful fetch."""
     try:
@@ -353,6 +464,7 @@ def _process_fetch(conn, args):
             # Uncomment to enable history tracking:
             # insert_market_history(conn, server_id, items)
             update_server_timestamps(conn, server_id, api_ts, max_item_time)
+            rebuild_market_summary(conn)
             conn.commit()
             logger.info(f"Successfully processed {name}: {len(full_data_items)} items")
         except sqlite3.Error as e:

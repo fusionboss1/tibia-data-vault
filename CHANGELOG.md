@@ -7,6 +7,145 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Inventory Manager
+
+#### Core Feature
+- **Stash Inventory Tracker** (`src/pages/Inventory.jsx`) — Full inventory management page
+  - Parses Tibia server log output to import items and quantities into the stash
+  - Flat sortable table showing all stash items with pricing signals
+  - Summary cards: estimated stash value (NPC/market buy), market sell total, global avg buy/sell totals, top server buy total
+
+#### Import System
+- **Log Import Modal** — Paste server log text to update stash quantities
+  - Regex-based parser: `^\d{2}:\d{2}:\d{2}\s+Retrieved\s+(\d+)x\s+(.+?)\s*\.$`
+  - Priority-based item name matching:
+    1. Items with an NPC buy price (most tradeable)
+    2. Items in the "Creature Products" category
+    3. Items with the most market activity
+  - Reports `unmatched_names` (no DB match) and `ambiguous_names` (multiple viable candidates after tiebreaking) in the result banner
+- **New API Endpoint** — `POST /api/inventory/import`
+  - Accepts `{ log_text }` body (JSON)
+  - **Replaces** quantities for matched items in `stash_inventory` (upsert by `item_id` — not additive)
+  - Returns `StashImportResult` with `items_imported` (int), `unmatched_names` (list), `ambiguous_names` (list)
+- **New Pydantic Models** — `StashImportRequest`, `StashImportResult`, `StashInventoryItem` in `backend/models.py`
+
+#### Pricing Accuracy Signals
+All signals are precomputed in `market_summary` and joined at query time — no expensive subqueries at runtime.
+
+- **Per-server prices** — `market_buy_offer`, `market_sell_offer` from selected server
+- **Server order counts** — `server_buy_orders`, `server_sell_orders` (local market depth)
+- **Global server coverage** — `active_servers / global_servers` (breadth of trading)
+- **Activity-weighted global averages** — weighted by `buy_offers + sell_offers` per server:
+  - `global_avg_buy` / `global_avg_sell` — all servers
+  - `opt_pvp_avg_buy` / `opt_pvp_avg_sell` — Optional PvP servers only
+  - `opt_pvp_green_avg_buy` / `opt_pvp_green_avg_sell` — Optional PvP + Green BattlEye only
+- **Top server reference** — most active server per item (buy/sell/name), with filtered variants:
+  - `top_server_*` — global top
+  - `opt_pvp_top_server_*` — Optional PvP top
+  - `opt_pvp_green_top_server_*` — Optional PvP + Green BattlEye top
+- **vs Global %** — deviation of selected server buy price vs `global_avg_buy` (always all-server average, regardless of `price_filter`)
+- **Data age** — hours since last market fetch for the selected server (`price_age_hours`)
+- **Liquidity Score (0–100)** — computed client-side from returned fields:
+  - Breadth (40 pts): `active_servers / global_servers`
+  - Depth (40 pts): `top_activity / 100` capped at 1.0
+  - Freshness (20 pts): ≤24h = 1.0, ≤72h = 0.5, older = 0.1
+  - Color-coded: green ≥70, yellow ≥40, red <40
+  - Items with no market data (null `global_servers`) score 0 and pass the "All liquidity" filter
+
+#### New Database Table — `market_summary`
+Precomputed per-item global market aggregates, rebuilt after each server fetch in `scripts/fetch_market.py`.
+**Must be created manually before first use** — `rebuild_market_summary()` uses `INSERT OR REPLACE` and does not auto-create the table. Run `scripts/migrate_inventory.py` or create it manually first.
+
+Average prices use **activity-weighted means** (`SUM(price × activity) / SUM(activity)` where activity = `buy_offers + sell_offers`).
+
+| Column | Type | Description |
+|---|---|---|
+| `item_id` | INTEGER PK | FK to `items` |
+| `global_servers` | INTEGER | Total servers with data |
+| `active_servers` | INTEGER | Servers with buy_offers+sell_offers > 0 |
+| `top_server_id` | INTEGER | Most active server (global) |
+| `top_server_buy` | INTEGER | Buy price on top server |
+| `top_server_sell` | INTEGER | Sell price on top server |
+| `top_activity` | INTEGER | Activity count on top server |
+| `global_avg_buy` | INTEGER | Activity-weighted avg buy, all servers |
+| `global_avg_sell` | INTEGER | Activity-weighted avg sell, all servers |
+| `opt_pvp_avg_buy` | INTEGER | Activity-weighted avg buy, Optional PvP |
+| `opt_pvp_avg_sell` | INTEGER | Activity-weighted avg sell, Optional PvP |
+| `opt_pvp_green_avg_buy` | INTEGER | Activity-weighted avg buy, Optional PvP + Green |
+| `opt_pvp_green_avg_sell` | INTEGER | Activity-weighted avg sell, Optional PvP + Green |
+| `opt_pvp_top_server_id` | INTEGER | Most active Optional PvP server |
+| `opt_pvp_top_server_buy` | INTEGER | Buy price on top Optional PvP server |
+| `opt_pvp_top_server_sell` | INTEGER | Sell price on top Optional PvP server |
+| `opt_pvp_green_top_server_id` | INTEGER | Most active Optional PvP + Green server |
+| `opt_pvp_green_top_server_buy` | INTEGER | Buy price on top Optional PvP + Green server |
+| `opt_pvp_green_top_server_sell` | INTEGER | Sell price on top Optional PvP + Green server |
+| `updated_at` | TIMESTAMP | Last rebuild time |
+
+#### New Database Table — `stash_inventory`
+Created by `scripts/migrate_inventory.py`.
+
+| Column | Type | Description |
+|---|---|---|
+| `id` | INTEGER PK | Auto-increment |
+| `item_id` | INTEGER | FK to `items` (ON DELETE SET NULL) |
+| `item_name` | TEXT NOT NULL COLLATE NOCASE | Denormalized item name |
+| `quantity` | INTEGER DEFAULT 0 CHECK ≥ 0 | Current quantity in stash |
+| `last_import_id` | INTEGER | FK to `stash_log_imports` (ON DELETE SET NULL) |
+| `updated_at` | DATETIME DEFAULT now | Last import timestamp |
+
+Unique index: `uq_stash_item_name ON stash_inventory (item_name COLLATE NOCASE)`
+
+#### New Database Table — `stash_log_imports`
+Created by `scripts/migrate_inventory.py`. Audit log of raw import pastes (currently stored but not queried by the API).
+
+| Column | Type | Description |
+|---|---|---|
+| `id` | INTEGER PK | Auto-increment |
+| `raw_text` | TEXT NOT NULL | Full pasted log text |
+| `imported_at` | DATETIME DEFAULT now | When import ran |
+| `lines_parsed` | INTEGER DEFAULT 0 | Total lines scanned |
+| `items_found` | INTEGER DEFAULT 0 | Items successfully matched |
+| `notes` | TEXT | Optional free-text notes |
+
+#### New API Endpoints
+- **`GET /api/inventory`** — Returns paginated stash with all pricing signals
+  - Query params: `search`, `category`, `server_id`, `weekly_only` (0/1), `price_filter` (`all`|`opt_pvp`|`opt_pvp_green`)
+  - Returns per-item: NPC prices, server market prices, all global avg variants, all top-server variants, vs_global_pct, price_age_hours, total_value, total_value_sell
+- **`GET /api/inventory/categories`** — Returns distinct categories present in stash
+- **`POST /api/inventory/import`** — Import/update stash from server log text
+
+#### Frontend Filters & Controls
+- **Search** — partial item name match (live, debounced via useCallback)
+- **Category selector** — filter to a single item category
+- **Price filter dropdown** — switches which global avg set is used for display and totals:
+  - `all` — Global avg (all servers)
+  - `opt_pvp` — Optional PvP only
+  - `opt_pvp_green` — Optional PvP + Green BattlEye *(default)*
+- **Liquidity filter dropdown** — hide items below a score threshold: All / Medium+ (≥40) / High only (≥70)
+- **Weekly delivery checkbox** — show only items present in `weekly_delivery_items` with `is_active = 1`
+- **Server selector** — select which server's live prices to show
+
+#### Frontend Table
+- Flat single table (no category grouping)
+- All columns sortable (click header to sort asc/desc, click again to reverse)
+- Columns: Item, Qty, NPC Buy, Mkt Buy, Mkt Sell, Total (Buy), Total (Sell), Glbl Avg Buy, Glbl Avg Sell, Orders, Active, vs Global, Liquidity, Top Server, Age
+- `hidden xl:table-cell` columns visible only on extra-large screens
+- Full-width layout (`max-w-full`)
+
+#### `scripts/fetch_market.py` Changes
+- Added `rebuild_market_summary(conn)` — computes and upserts all global aggregates
+  - Subquery `g`: per-item global + filtered activity-weighted averages
+  - Subquery `t`: global top server (highest `buy_offers + sell_offers`, ties by MIN server_id)
+  - Subquery `t1`: top Optional PvP server per item
+  - Subquery `t2`: top Optional PvP + Green BattlEye server per item
+  - Uses `INSERT OR REPLACE` — full row replacement per item
+  - Called after every successful per-server upsert (incremental, not a full wipe)
+
+#### New Migration Script — `scripts/migrate_inventory.py`
+- Creates `stash_inventory` and `stash_log_imports` tables
+- Run with: `python -m scripts.migrate_inventory`
+- Safe to re-run (`CREATE TABLE IF NOT EXISTS`)
+
 ## [0.2.0] - 2026-05-26
 
 ### Added

@@ -141,6 +141,34 @@ def migrate_market_history(conn: sqlite3.Connection) -> None:
     print("✓ market_history table migrated")
 
 
+def create_weekly_delivery_items(conn: sqlite3.Connection) -> None:
+    """Create the weekly delivery items table used to track the active delivery pool."""
+    logger.info("Creating weekly_delivery_items table...")
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS weekly_delivery_items (
+            item_id INTEGER PRIMARY KEY,
+            is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+            source_order INTEGER,
+            source_market_value TEXT,
+            notes TEXT,
+            added_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP,
+            FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
+        );
+    """)
+
+    existing_columns = {
+        row[1] for row in conn.execute("PRAGMA table_info(weekly_delivery_items)")
+    }
+
+    if "source_order" not in existing_columns:
+        conn.execute("ALTER TABLE weekly_delivery_items ADD COLUMN source_order INTEGER")
+    if "source_market_value" not in existing_columns:
+        conn.execute("ALTER TABLE weekly_delivery_items ADD COLUMN source_market_value TEXT")
+
+    print("✓ weekly_delivery_items table created")
+
+
 def create_indexes(conn: sqlite3.Connection) -> None:
     """Create performance indexes."""
     logger.info("Creating indexes...")
@@ -152,6 +180,8 @@ def create_indexes(conn: sqlite3.Connection) -> None:
         CREATE INDEX IF NOT EXISTS idx_items_category ON items(category);
         CREATE INDEX IF NOT EXISTS idx_items_tier ON items(tier);
         CREATE INDEX IF NOT EXISTS idx_servers_region ON servers(region);
+        CREATE INDEX IF NOT EXISTS idx_weekly_delivery_items_active ON weekly_delivery_items(is_active);
+        CREATE INDEX IF NOT EXISTS idx_weekly_delivery_items_source_order ON weekly_delivery_items(source_order);
     """)
     print("✓ indexes created")
 
@@ -176,6 +206,7 @@ def run_migration() -> None:
         migrate_servers(conn)
         migrate_market_current(conn)
         migrate_market_history(conn)
+        create_weekly_delivery_items(conn)
         create_indexes(conn)
         
         # Re-enable foreign keys and commit
