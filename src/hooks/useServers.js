@@ -7,9 +7,13 @@ export const useServers = () => {
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    const controller = new AbortController()
+
     const fetchServers = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.SERVERS}`)
+        const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.SERVERS}`, {
+          signal: controller.signal,
+        })
         if (!response.ok) {
           throw new Error('Failed to fetch servers')
         }
@@ -18,6 +22,7 @@ export const useServers = () => {
         setServers(serversArray)
         setError(null)
       } catch (err) {
+        if (err.name === 'AbortError') return
         console.error('Error fetching servers:', err)
         setError(err.message)
       } finally {
@@ -26,6 +31,7 @@ export const useServers = () => {
     }
 
     fetchServers()
+    return () => controller.abort()
   }, [])
 
   return { servers, loading, error }

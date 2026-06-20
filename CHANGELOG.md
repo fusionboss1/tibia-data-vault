@@ -5,7 +5,115 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [Unreleased] — feature/rework branch
+
+### Added — Dashboard Market Card Filters
+- **`src/pages/Dashboard.jsx`** — added a filter bar above the Tibia Coin / Gold Token / Silver Token cards with PvP type buttons (All / Open PvP / Optional PvP / Retro Open PvP / Retro Hardcore PvP), BattlEye buttons (All / Green / Yellow), and an "Exclude blocked" checkbox
+- **`src/hooks/useMarketData.js`** — extended to accept `pvpType`, `battleye`, and `excludeBlocked` params; passes them as query strings to the API; re-fetches on filter change with 300ms debounce
+- **`backend/routes/market.py`** — `/api/market/global-key-items` now accepts `pvp_type`, `battleye`, and `exclude_blocked` query params, filtering both the aggregated prices and the `total_servers` coverage count accordingly
+
+### Added — Item Price Generator Script (`generate_item_prices.py`)
+- New standalone script at project root that generates a `output_cache.json` file for use as custom item prices in the Tibia game client
+- Reads active items from `weekly_delivery_items`, looks up averages in `market_summary`, discards items where the market price doesn't exceed NPC price
+- Calculates a confidence score per item (0–1) based on active server count, transaction activity, and buy/sell spread; items below the threshold are skipped
+- Interactive prompts: server type (Global / Optional PvP / Optional PvP Green BattlEye) and confidence threshold
+- Outputs only `customSalePrices` — no `primaryLootValueSources` — so the game keeps NPC buy value as the default source and only overrides specific items with global market-based prices
+
+### Fixed — Market Fetch: New Item IDs Not Inserted (`scripts/fetch_market.py`)
+- When the market API returned data for item IDs not yet in the local `items` table, those items were silently skipped
+- Added `ensure_items_exist()` function: on each fetch, it detects unknown item IDs, fetches their metadata from the API (`/item_metadata`), and inserts them into the `items` table before upserting market data
+- Added `item_metadata.json` at project root as a local cache — the script loads from it first and only calls the API for IDs not found in the file
+- Added `ITEM_METADATA_PATH` to `backend/config.py` and exported from `backend/__init__.py`
+
+### Deprecated — Exporteitor (pending full rework)
+- `src/pages/Exporteitor.jsx` and `src/hooks/useStashExportPlan.js` have been archived (moved to `.archive/`)
+- The page is no longer reachable from the sidebar while under rework
+- Backend endpoints `GET /api/export/stash-plan` and `GET /api/market/item-servers` (added in a prior session) remain in `backend/api.py` and will be re-evaluated when the new Exporteitor is built
+- The rework will redesign the full feature from scratch on this same branch
+
+### Refactored — Backend Modularization (`backend/api.py` → Flask Blueprints)
+
+`backend/api.py` was 1423 lines with all endpoints in a single file. It was split into a `backend/routes/` package using Flask Blueprints — one module per domain.
+
+| New file | Endpoints moved |
+|---|---|
+| `backend/routes/health.py` | `GET /api/health` |
+| `backend/routes/servers.py` | `GET /api/servers`, `GET /api/servers/<id>` |
+| `backend/routes/items.py` | `GET /api/items`, `GET /api/items/<id>` |
+| `backend/routes/market.py` | `GET /api/market/current`, `/history`, `/stats`, `/global-key-items`, `/item-servers` |
+| `backend/routes/delivery.py` | `GET /api/delivery/items` |
+| `backend/routes/export.py` | `GET /api/export/opportunities` |
+| `backend/routes/inventory.py` | `GET /api/inventory`, `GET /api/inventory/categories`, `POST /api/inventory/import`, `GET /api/export/stash-plan` |
+
+`backend/api.py` now contains only app setup, error handlers, and blueprint registration (~100 lines). All endpoint URLs are unchanged — no frontend changes required.
+
+### Refactored — Frontend Modularization
+
+Large monolithic page files were broken into focused, single-purpose pieces.
+
+#### `src/pages/Inventory.jsx` (~554 lines → ~100 lines)
+- Extracted data-fetching and import logic into `src/hooks/useInventory.js`
+- Extracted filter bar into `src/components/inventory/InventoryFilters.jsx`
+- Extracted sortable table into `src/components/inventory/InventoryTable.jsx`
+- Extracted import modal into `src/components/inventory/ImportModal.jsx`
+- Page now only composes these pieces together
+
+#### `src/pages/Inventory.jsx` — further modularization
+- Extracted pure inventory helpers (`liquidityScore`, `liquidityColor`, `deriveMarketFields`, `filterInventoryItems`, `sortInventoryItems`, `calculateInventoryTotals`) to `src/utils/inventory.js`
+- Extracted table state and derived data (search, liquidity filter, sort, filtered items, totals) into new `src/hooks/useInventoryTable.js`
+- `InventoryTable` now imports `liquidityScore`/`liquidityColor` directly from utils instead of receiving them as props
+- Component now only imports UI pieces and delegates all data logic to hooks
+
+#### `src/pages/WeeklyDelivery.jsx` (~391 lines → ~97 lines)
+- Extracted filter/stats bar into `src/components/delivery/DeliveryFilters.jsx`
+- Extracted sortable table into `src/components/delivery/DeliveryTable.jsx`
+- Moved all pure helper functions (`formatSignedPrice`, `getDeliveryMargin`, `getDeliverySuggestedAction`, `getSourceMarketValueColor`) to `src/utils/formatters.js`
+- Page now only composes these pieces together
+
+### Added — Performance Improvements
+
+#### 1. Lazy Page Mounting (`src/App.jsx`)
+- Pages are no longer all mounted on app load
+- A page component is only created the first time the user navigates to it
+- After that first visit it stays mounted but hidden, so switching back is instant
+- Eliminates all API calls from unvisited pages on startup
+
+#### 2. Shared Server Data (`src/contexts/ServersContext.jsx`) — new file
+- Created `ServersContext` that calls `useServers()` exactly once
+- Wrapped the entire app with `ServersProvider` in `App.jsx`
+- `src/pages/Servers.jsx`, `src/pages/WeeklyDelivery.jsx`, `src/pages/Inventory.jsx` now consume `useServersContext()` instead of calling `useServers()` independently
+- Removed internal server-fetching logic from `src/hooks/useInventory.js`
+- Eliminates 2–3 redundant `/api/servers` calls that previously fired simultaneously on load
+
+#### 3. Virtual Scrolling on Inventory Table (`src/components/inventory/InventoryTable.jsx`)
+- Installed `@tanstack/react-virtual` (v3)
+- The `<tbody>` now only renders the rows visible in the viewport (~15–20 at a time)
+- Padding rows above and below maintain correct scroll position
+- Sticky `<thead>` remains visible while scrolling
+- Drastically reduces DOM size for inventories with hundreds of items
+
+#### 4. Debounced Market Data Fetching (`src/hooks/useMarketData.js`)
+- Added a 300ms debounce before the `/api/market/global-key-items` fetch fires
+- Rapid filter changes on the Dashboard (e.g. clicking PvP type then BattlEye) now wait until the user stops clicking before sending a request
+- Prevents one API call per button click when multiple filters are changed quickly
+
+#### 5. `React.memo` on Table Components
+- `src/components/inventory/InventoryTable.jsx` — wrapped with `React.memo`
+- `src/components/delivery/DeliveryTable.jsx` — wrapped with `React.memo`
+- `src/components/delivery/DeliveryFilters.jsx` — wrapped with `React.memo`
+- Components now skip re-rendering when their props have not changed
+
+#### 6. Memoized Field Name Derivations (`src/pages/Inventory.jsx`)
+- The 5 dynamic field names (`avgBuyField`, `avgSellField`, `topServerNameField`, `topServerBuyField`, `topServerSellField`) that depend on `priceFilter` are now wrapped in a single `useMemo`
+- Previously recomputed on every render, which cascaded into unnecessary re-filtering of the full item list
+
+#### 7. Cached Number Formatter
+- `new Intl.NumberFormat('en-US')` is now a module-level constant `NUMBER_FMT` in:
+  - `src/components/inventory/InventoryTable.jsx`
+  - `src/components/delivery/DeliveryTable.jsx`
+  - `src/components/delivery/DeliveryFilters.jsx`
+  - `src/utils/formatters.js` (shared by `formatNumber`, `formatPrice`, `formatSignedPrice`)
+- Previously a new formatter object was created on every number rendered in every row
 
 ## [0.4.0] - 2026-05-27
 

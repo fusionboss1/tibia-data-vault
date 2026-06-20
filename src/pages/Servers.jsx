@@ -1,4 +1,4 @@
-import { useServers } from '../hooks/useServers'
+import { useServersContext } from '../contexts/ServersContext'
 import { useFilters } from '../hooks/useFilters'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import ErrorMessage from '../components/common/ErrorMessage'
@@ -6,7 +6,7 @@ import ServerFilters from '../components/servers/ServerFilters'
 import ServerTable from '../components/servers/ServerTable'
 
 function Servers() {
-  const { servers, loading, error } = useServers()
+  const { servers, loading, error } = useServersContext()
   const {
     filters,
     filteredItems: filteredServers,

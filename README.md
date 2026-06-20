@@ -4,7 +4,7 @@ A web application for browsing and managing Tibia game server data.
 
 ## Version
 
-Current version: 0.4.0 (see [Unreleased] in CHANGELOG for upcoming changes)
+Current version: 0.4.0 — `feature/rework` branch contains unreleased modularization and performance improvements (see [Unreleased] in CHANGELOG)
 
 See [CHANGELOG.md](CHANGELOG.md) for version history and changes.
 
@@ -18,20 +18,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history and changes.
   - Summary cards: stash value (buy/sell), global avg buy/sell totals, top-server buy total
   - Filters: search, category, server, price filter scope, liquidity threshold, weekly-delivery-only toggle
   - Ambiguous and unmatched item names reported after import
-- **Exporteitor**: Advanced export opportunity analyzer for Optional PvP servers
-  - **Browse Mode**: Discover profitable items to export between servers
-    - Filter by item name, category, minimum profit %, activity, and server count
-    - Sort by profit (list/instant), activity, server count, price, or name
-    - View detailed target server prices and market activity
-    - Real-time data freshness indicator
-  - **Export Plan Mode**: Automated export calculator
-    - Auto-selects best target server based on total profit potential
-    - Calculates ROI with transfer costs (750 Tibia Coins)
-    - Generates complete shopping list with profit analysis
-    - Shows gross profit, transfer cost, and net profit
-  - Only shows profitable opportunities (positive profit margins)
-  - Excludes blocked servers from all calculations
-  - Client-side filtering for instant search results
+- **Exporteitor** *(under rework — temporarily unavailable)*: Export opportunity analyzer for Optional PvP servers; being redesigned from scratch on the `feature/rework` branch
 - **Weekly Delivery Panel**: Delivery-item lookup and sell/keep decision helper
   - Imports the full delivery pool from TibiaPal into a separate table
   - Shows NPC price, imported demand label, local server price, and global average price
@@ -62,6 +49,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history and changes.
 - **TailwindCSS**: Styling
 - **Lucide React**: Icons
 - **PropTypes**: Runtime type validation
+- **@tanstack/react-virtual**: Virtual scrolling for large lists
 
 ## Project Structure
 
@@ -69,10 +57,18 @@ See [CHANGELOG.md](CHANGELOG.md) for version history and changes.
 tibia-data-vault/
 ├── backend/                # Python backend package
 │   ├── __init__.py
-│   ├── api.py              # Flask API server (main implementation)
+│   ├── api.py              # App setup, error handlers, blueprint registration (~100 lines)
 │   ├── config.py           # Centralized configuration with env var support
 │   ├── db.py               # Database connection management
 │   ├── models.py           # Pydantic data models
+│   ├── routes/             # Flask Blueprints — one file per endpoint domain
+│   │   ├── health.py       # GET /api/health
+│   │   ├── servers.py      # GET /api/servers, /api/servers/<id>
+│   │   ├── items.py        # GET /api/items, /api/items/<id>
+│   │   ├── market.py       # GET /api/market/*
+│   │   ├── delivery.py     # GET /api/delivery/items
+│   │   ├── export.py       # GET /api/export/opportunities
+│   │   └── inventory.py    # GET|POST /api/inventory/*, GET /api/export/stash-plan
 ├── scripts/                # CLI entry points
 │   ├── fetch_market.py     # Market data fetcher from tibiamarket.top
 │   ├── import_weekly_delivery_items.py  # TibiaPal delivery pool importer
@@ -83,37 +79,51 @@ tibia-data-vault/
 ├── tests/                  # Test files and sample data
 ├── api.py                  # Backward compatibility wrapper
 ├── run.py                  # Orchestrator to start both API and frontend
+├── generate_item_prices.py # Generates output_cache.json with custom item prices for the Tibia client
+├── output_cache.json       # Generated output — copy to Tibia character settings folder
+├── item_metadata.json      # Local cache of item metadata fetched from tibiamarket.top API
 ├── tibia_data.db           # SQLite database
 ├── .env                    # Environment configuration
 ├── requirements.txt        # Python dependencies
 ├── index.html              # HTML entry point
 ├── package.json            # Node.js dependencies
 ├── src/                    # React frontend source
+│   ├── pages/              # Page-level components (lean composition only)
+│   │   ├── Dashboard.jsx
+│   │   ├── Servers.jsx
+│   │   ├── Inventory.jsx
+│   │   └── WeeklyDelivery.jsx
 │   ├── components/         # Reusable UI components
 │   │   ├── common/         # Generic components (LoadingSpinner, ErrorMessage, etc.)
 │   │   ├── dashboard/      # Dashboard-specific components
 │   │   ├── servers/        # Server browser components
-│   │   ├── layout/         # Layout components (Sidebar)
-│   │   └── ErrorBoundary.jsx
-│   ├── pages/              # Page-level components
-│   │   ├── Dashboard.jsx
-│   │   ├── Servers.jsx
-│   │   ├── Exporteitor.jsx
-│   │   ├── Inventory.jsx
-│   │   └── WeeklyDelivery.jsx
+│   │   ├── inventory/      # Inventory-specific components
+│   │   │   ├── InventoryFilters.jsx
+│   │   │   ├── InventoryTable.jsx  # Virtual scrolling, React.memo
+│   │   │   └── ImportModal.jsx
+│   │   ├── delivery/       # Weekly delivery components
+│   │   │   ├── DeliveryFilters.jsx  # React.memo
+│   │   │   └── DeliveryTable.jsx   # React.memo
+│   │   └── layout/         # Layout components (Sidebar, ErrorBoundary)
 │   ├── hooks/              # Custom React hooks
 │   │   ├── useServers.js
-│   │   ├── useMarketData.js
+│   │   ├── useMarketData.js    # 300ms debounced fetching
+│   │   ├── useInventory.js     # Inventory data + import logic
+│   │   ├── useInventoryTable.js  # Client-side inventory table state + derived data
 │   │   ├── useExportOpportunities.js
 │   │   ├── useFilters.js
 │   │   └── useWeeklyDeliveryItems.js
+│   │   # note: useStashExportPlan.js archived with Exporteitor rework
+│   ├── contexts/           # Shared React context providers
+│   │   └── ServersContext.jsx  # Single shared /api/servers fetch
 │   ├── utils/              # Utility functions
-│   │   └── formatters.js
+│   │   ├── formatters.js   # Shared pure helpers + cached NUMBER_FMT
+│   │   └── inventory.js    # Liquidity scoring, field mapping, filtering, sorting, totals
 │   ├── constants/          # Application constants
 │   │   ├── api.js
 │   │   ├── filters.js
 │   │   └── items.js
-│   ├── App.jsx
+│   ├── App.jsx             # Lazy page mounting + ServersProvider
 │   ├── main.jsx
 │   └── index.css
 ├── .venv/                  # Python virtual environment
@@ -179,37 +189,53 @@ Use `scripts/fetch_market.py` to pull market data from the [tibiamarket.top API]
 
 ```bash
 # Fetch specific servers
-python scripts/fetch_market.py --name Antica Secura
+python -m scripts.fetch_market --name Antica Secura
 
 # Import the weekly delivery pool from TibiaPal
-python scripts/import_weekly_delivery_items.py
+python -m scripts.import_weekly_delivery_items
 
 # Set up inventory tables (required before using Inventory Manager)
 python -m scripts.migrate_inventory
 
 # Fetch by region
-python scripts/fetch_market.py --region EU
+python -m scripts.fetch_market --region EU
 
 # Fetch by PvP type
-python scripts/fetch_market.py --pvp "Open PvP"
+python -m scripts.fetch_market --pvp "Open PvP"
 
 # Fetch by BattlEye status
-python scripts/fetch_market.py --battleye Green
+python -m scripts.fetch_market --battleye Green
 
 # Fetch all servers
-python scripts/fetch_market.py --all
+python -m scripts.fetch_market --all
 
 # Preview without writing
-python scripts/fetch_market.py --region SA --dry-run
+python -m scripts.fetch_market --region SA --dry-run
 
 # Force re-fetch even if timestamps match
-python scripts/fetch_market.py --name Antica --force
+python -m scripts.fetch_market --name Antica --force
 
 # Enable verbose logging
-python scripts/fetch_market.py --all --verbose
+python -m scripts.fetch_market --all --verbose
 ```
 
 The script checks the API's `world_data` endpoint first and **skips servers whose data hasn't changed** since the last fetch, comparing against `servers.api_last_update` in the DB.
+
+New item IDs returned by the API are automatically fetched from `/item_metadata` and inserted into the `items` table. A local `item_metadata.json` cache at the project root is checked first to reduce API calls.
+
+### Generating Item Prices for the Tibia Client
+
+`generate_item_prices.py` reads your weekly delivery item list, cross-references global market data, and generates `output_cache.json` — a file you manually copy into your Tibia character settings folder to set custom item prices.
+
+```bash
+python generate_item_prices.py
+```
+
+The script will ask:
+1. **Server type** — which market averages to use (Global / Optional PvP / Optional PvP Green BattlEye)
+2. **Confidence threshold** (0.0–1.0, default 0.3) — how strict to be about data quality; higher = fewer items but more accurate
+
+Items are excluded if their market price doesn't beat the NPC buy price, or if their confidence score is too low. Output is written to `output_cache.json`.
 
 ### Manual Startup
 
@@ -576,20 +602,30 @@ The frontend follows React best practices with a modular, component-based archit
 
 **Custom Hooks:**
 - `useServers()` - Fetches server data with loading/error states
-- `useMarketData()` - Fetches market data with loading/error states
+- `useServersContext()` - Consumes shared server data from `ServersContext` (no extra fetch)
+- `useMarketData()` - Fetches market data with 300ms debounce on filter changes
+- `useInventory()` - Inventory data fetching, categories, and import logic
 - `useFilters(items)` - Manages filter state with memoized filtering logic
 - `useWeeklyDeliveryItems()` - Fetches weekly delivery items with local and global pricing
+
+**Context Providers:**
+- `ServersContext` / `ServersProvider` — Fetches `/api/servers` once at app level; all pages consume the same data without re-fetching
 
 **Reusable Components:**
 - **Common**: `LoadingSpinner`, `ErrorMessage`, `FilterInput`, `FilterSelect`
 - **Dashboard**: `MarketItemCard`, `QuickActionCard`
 - **Servers**: `ServerFilters`, `ServerTable`
+- **Inventory**: `InventoryFilters`, `InventoryTable`, `ImportModal`
+- **Delivery**: `DeliveryFilters`, `DeliveryTable`
 - **Layout**: `Sidebar`, `ErrorBoundary`
 
 **Performance Optimizations:**
-- `React.memo` - Prevents unnecessary re-renders of pure components
-- `useMemo` - Memoizes expensive computations (filtering, calculations)
-- `useCallback` - Stabilizes function references to prevent re-renders
+- `React.memo` - `InventoryTable`, `DeliveryTable`, `DeliveryFilters` skip re-renders when props are unchanged
+- `useMemo` - Memoizes expensive computations (filtering, field name derivations, calculations)
+- `useCallback` - Stabilizes function references to prevent child re-renders
+- **Virtual scrolling** (`@tanstack/react-virtual`) - Inventory table renders only visible rows (~15–20) regardless of total item count
+- **Lazy page mounting** - Pages are only mounted on first visit; not all rendered upfront
+- **Cached formatters** - `Intl.NumberFormat` instance created once per module, reused on every render
 
 **Type Safety & Error Handling:**
 - PropTypes validation on all components

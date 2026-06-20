@@ -16,6 +16,7 @@ DATA_DIR = BASE_DIR
 
 # Database configuration
 DB_PATH = os.getenv("TIBIA_DB_PATH", str(DATA_DIR / "tibia_data.db"))
+ITEM_METADATA_PATH = os.getenv("TIBIA_ITEM_METADATA_PATH", str(DATA_DIR / "item_metadata.json"))
 
 # API configuration
 API_HOST = os.getenv("TIBIA_API_HOST", "0.0.0.0")

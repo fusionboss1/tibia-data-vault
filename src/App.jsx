@@ -3,31 +3,40 @@ import ErrorBoundary from './components/ErrorBoundary'
 import Sidebar from './components/layout/Sidebar'
 import Dashboard from './pages/Dashboard'
 import Servers from './pages/Servers'
-import Exporteitor from './pages/Exporteitor'
 import WeeklyDelivery from './pages/WeeklyDelivery'
 import Inventory from './pages/Inventory'
 import { isFeatureEnabled } from './constants/features'
+import { ServersProvider } from './contexts/ServersContext'
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard')
+  const [mountedPages, setMountedPages] = useState(new Set(['dashboard']))
 
   const handleNavigate = (page) => {
+    setMountedPages(prev => new Set([...prev, page]))
     setCurrentPage(page)
   }
 
   return (
+    <ServersProvider>
     <ErrorBoundary>
       <div className="flex min-h-screen bg-gray-900 text-gray-100">
         <Sidebar currentPage={currentPage} onNavigate={handleNavigate} />
         <div className="flex-1">
-          {currentPage === 'dashboard' && <Dashboard />}
-          {currentPage === 'servers' && <Servers />}
-          {currentPage === 'exporteitor' && <Exporteitor />}
-          {currentPage === 'delivery' && <WeeklyDelivery />}
-          {isFeatureEnabled('INVENTORY') && currentPage === 'inventory' && <Inventory />}
+          <div className={currentPage === 'dashboard' ? '' : 'hidden'}><Dashboard onNavigate={handleNavigate} /></div>
+          {mountedPages.has('servers') && (
+            <div className={currentPage === 'servers' ? '' : 'hidden'}><Servers /></div>
+          )}
+          {mountedPages.has('delivery') && (
+            <div className={currentPage === 'delivery' ? '' : 'hidden'}><WeeklyDelivery /></div>
+          )}
+          {isFeatureEnabled('INVENTORY') && mountedPages.has('inventory') && (
+            <div className={currentPage === 'inventory' ? '' : 'hidden'}><Inventory /></div>
+          )}
         </div>
       </div>
     </ErrorBoundary>
+    </ServersProvider>
   )
 }
 

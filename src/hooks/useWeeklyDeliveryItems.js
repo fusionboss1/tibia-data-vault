@@ -8,6 +8,8 @@ export const useWeeklyDeliveryItems = (serverId, search = '') => {
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    const controller = new AbortController()
+
     const fetchDeliveryItems = async () => {
       setLoading(true)
       setServerName('')
@@ -25,7 +27,8 @@ export const useWeeklyDeliveryItems = (serverId, search = '') => {
 
         const query = params.toString()
         const response = await fetch(
-          `${API_BASE_URL}${API_ENDPOINTS.DELIVERY_ITEMS}${query ? `?${query}` : ''}`
+          `${API_BASE_URL}${API_ENDPOINTS.DELIVERY_ITEMS}${query ? `?${query}` : ''}`,
+          { signal: controller.signal }
         )
 
         if (!response.ok) {
@@ -37,6 +40,7 @@ export const useWeeklyDeliveryItems = (serverId, search = '') => {
         setServerName(result.data?.server_name || '')
         setError(null)
       } catch (err) {
+        if (err.name === 'AbortError') return
         console.error('Error fetching weekly delivery items:', err)
         setError(err.message)
         setDeliveryItems([])
@@ -46,6 +50,7 @@ export const useWeeklyDeliveryItems = (serverId, search = '') => {
     }
 
     fetchDeliveryItems()
+    return () => controller.abort()
   }, [serverId, search])
 
   return { deliveryItems, serverName, loading, error }

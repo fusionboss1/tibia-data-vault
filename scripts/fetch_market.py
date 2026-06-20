@@ -17,16 +17,19 @@ Add --dry-run to show which servers would be fetched without doing it.
 """
 
 import argparse
+import json
 import logging
 import sqlite3
 import sys
 import time
+from pathlib import Path
 from typing import Optional
 
 import requests
 
 from backend import (
     get_db,
+    ITEM_METADATA_PATH,
     TIBIA_MARKET_API_URL,
     REQUEST_TIMEOUT,
     REQUEST_DELAY,
@@ -138,6 +141,107 @@ def select_servers(conn, args) -> list[sqlite3.Row]:
     except sqlite3.Error as e:
         logger.error(f"Database error selecting servers: {e}")
         raise
+
+
+def fetch_item_metadata(item_ids: set[int]) -> list[dict]:
+    """Fetch metadata for a set of item IDs from the item_metadata endpoint."""
+    results = []
+    for item_id in item_ids:
+        try:
+            resp = requests.get(
+                f"{TIBIA_MARKET_API_URL}/item_metadata",
+                params={"item_id": item_id},
+                timeout=REQUEST_TIMEOUT,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            if data:
+                results.extend(data)
+        except requests.RequestException as e:
+            logger.warning(f"Failed to fetch metadata for item_id={item_id}: {e}")
+    return results
+
+
+def load_item_metadata_file() -> dict[int, dict]:
+    """Load item_metadata.json from disk. Returns a dict keyed by item id, or empty dict if missing."""
+    path = Path(ITEM_METADATA_PATH)
+    if not path.exists():
+        logger.debug(f"item_metadata.json not found at {path}")
+        return {}
+    with path.open(encoding="utf-8") as f:
+        data = json.load(f)
+    return {entry["id"]: entry for entry in data}
+
+
+def ensure_items_exist(conn, items: list[dict]) -> int:
+    """Insert metadata for any item IDs not yet in the items table. Returns count inserted."""
+    incoming_ids = {item["id"] for item in items if item.get("is_full_data")}
+    if not incoming_ids:
+        return 0
+    known_ids = {row[0] for row in conn.execute("SELECT id FROM items")}
+    new_ids = incoming_ids - known_ids
+    if not new_ids:
+        return 0
+
+    file_cache = load_item_metadata_file()
+    file_hits = {id_: file_cache[id_] for id_ in new_ids if id_ in file_cache}
+    api_needed = new_ids - file_hits.keys()
+
+    metadata = list(file_hits.values())
+    if api_needed:
+        logger.info(f"{len(api_needed)} new item(s) not in item_metadata.json, fetching from API...")
+        metadata += fetch_item_metadata(api_needed)
+    else:
+        logger.info(f"All {len(new_ids)} new item(s) resolved from item_metadata.json")
+
+    rows = []
+    for m in metadata:
+        npc_sell = m.get("npc_sell") or []
+        npc_buy = m.get("npc_buy") or []
+
+        sell_prices = [n["price"] for n in npc_sell if n.get("price")]
+        buy_prices = [n["price"] for n in npc_buy if n.get("price")]
+        best_sell_price = min(sell_prices) if sell_prices else None
+        best_buy_price = max(buy_prices) if buy_prices else None
+
+        best_sell_npcs = list({n["name"] for n in npc_sell if n.get("price") == best_sell_price}) if best_sell_price else None
+        best_buy_npcs = list({n["name"] for n in npc_buy if n.get("price") == best_buy_price}) if best_buy_price else None
+
+        tier = m.get("tier")
+        if tier is not None and tier < 0:
+            tier = None
+
+        rows.append((
+            m["id"],
+            m["name"],
+            m.get("category") or "Unknown",
+            tier,
+            m.get("wiki_name"),
+            best_sell_price,
+            json.dumps(best_sell_npcs) if best_sell_npcs else None,
+            best_buy_price,
+            json.dumps(best_buy_npcs) if best_buy_npcs else None,
+        ))
+
+    fetched_ids = {r[0] for r in rows}
+    missing_ids = new_ids - fetched_ids
+    if missing_ids:
+        logger.warning(f"Could not fetch metadata for {len(missing_ids)} item(s), inserting stubs: {sorted(missing_ids)}")
+        for id_ in missing_ids:
+            rows.append((id_, f"Unknown Item {id_}", "Unknown", None, None, None, None, None, None))
+
+    conn.executemany(
+        """
+        INSERT OR IGNORE INTO items
+            (id, name, category, tier, wiki_name,
+             best_npc_sell_price, best_npc_sell_npcs,
+             best_npc_buy_price, best_npc_buy_npcs)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        rows,
+    )
+    logger.info(f"Inserted {len(rows)} new item(s) into items table")
+    return len(rows)
 
 
 def upsert_market_current(conn, server_id: int, items: list[dict]) -> int:
@@ -453,29 +557,29 @@ def _process_fetch(conn, args):
             print(f"FAILED ({exc})")
             logger.error(f"Failed to fetch {name}: {exc}")
             failed.append(name)
-            continue
+            items = None
 
-        full_data_items = [it for it in items if it.get("is_full_data")]
-        max_item_time = max((it["time"] for it in full_data_items), default=None)
+        if items is not None:
+            full_data_items = [it for it in items if it.get("is_full_data")]
+            max_item_time = max((it["time"] for it in full_data_items), default=None)
 
-        # Database operations with transaction
-        try:
-            upsert_market_current(conn, server_id, items)
-            # Uncomment to enable history tracking:
-            # insert_market_history(conn, server_id, items)
-            update_server_timestamps(conn, server_id, api_ts, max_item_time)
-            rebuild_market_summary(conn)
-            conn.commit()
-            logger.info(f"Successfully processed {name}: {len(full_data_items)} items")
-        except sqlite3.Error as e:
-            conn.rollback()
-            print(f"FAILED (DB error: {e})")
-            logger.error(f"Database error processing {name}: {e}")
-            failed.append(name)
-            continue
-
-        print(f"OK — {len(full_data_items)} full-data items (max time: {max_item_time})")
-        fetched += 1
+            # Database operations with transaction
+            try:
+                ensure_items_exist(conn, items)
+                upsert_market_current(conn, server_id, items)
+                # Uncomment to enable history tracking:
+                # insert_market_history(conn, server_id, items)
+                update_server_timestamps(conn, server_id, api_ts, max_item_time)
+                rebuild_market_summary(conn)
+                conn.commit()
+                logger.info(f"Successfully processed {name}: {len(full_data_items)} items")
+                print(f"OK — {len(full_data_items)} full-data items (max time: {max_item_time})")
+                fetched += 1
+            except sqlite3.Error as e:
+                conn.rollback()
+                print(f"FAILED (DB error: {e})")
+                logger.error(f"Database error processing {name}: {e}")
+                failed.append(name)
 
         if i < len(to_fetch) - 1:
             print(f"Waiting {REQUEST_DELAY} seconds before next request...")

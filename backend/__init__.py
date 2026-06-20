@@ -2,6 +2,7 @@
 
 from backend.config import (
     DB_PATH,
+    ITEM_METADATA_PATH,
     API_HOST,
     API_PORT,
     API_DEBUG,
@@ -18,6 +19,7 @@ __version__ = "0.1.0"
 
 __all__ = [
     "DB_PATH",
+    "ITEM_METADATA_PATH",
     "API_HOST",
     "API_PORT",
     "API_DEBUG",

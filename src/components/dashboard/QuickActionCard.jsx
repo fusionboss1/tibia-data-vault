@@ -9,6 +9,7 @@ const QuickActionCard = memo(function QuickActionCard({
   description, 
   color = 'blue',
   href,
+  onClick,
   isLink = true 
 }) {
   const baseClasses = "bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-700 transition-all"
@@ -33,6 +34,14 @@ const QuickActionCard = memo(function QuickActionCard({
     </div>
   )
 
+  if (isLink && onClick) {
+    return (
+      <button onClick={onClick} className={`${baseClasses} ${interactiveClasses} w-full text-left`}>
+        {content}
+      </button>
+    )
+  }
+
   if (isLink && href) {
     return (
       <a href={href} className={`${baseClasses} ${interactiveClasses}`}>
@@ -54,6 +63,7 @@ QuickActionCard.propTypes = {
   description: PropTypes.string.isRequired,
   color: PropTypes.oneOf(['yellow', 'amber', 'gray', 'blue', 'purple']),
   href: PropTypes.string,
+  onClick: PropTypes.func,
   isLink: PropTypes.bool
 }
 

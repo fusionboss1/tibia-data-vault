@@ -203,13 +203,19 @@ git tag v0.1.2
 ## Current Repository State
 
 ```
-master (v0.1.1) ← You are here
-  └─ Initial commit with complete project structure
+master (v0.1.1) — remote origin/master
+  └─ develop
+       └─ feature/rework ← You are here (uncommitted changes)
+            ├─ Frontend modularization (Inventory + WeeklyDelivery split into components/hooks)
+            └─ Performance improvements (lazy mounting, ServersContext, virtual scroll, debounce, memo, cached formatters)
 ```
+
+**Pending actions on `feature/rework`:**
+1. Commit all current changes with appropriate message(s)
+2. Merge into `develop` when ready
+3. Merge `develop` into `master` and tag as new version for release
 
 ## Next Steps
 
-1. Create `develop` branch: `git checkout -b develop`
-2. Create feature/experiment branches as needed
-3. Set up remote repository (GitHub/GitLab) when ready
-4. Push branches: `git push -u origin develop`
+1. Set up remote repository (GitHub/GitLab) when ready
+2. Push branches: `git push -u origin develop`
