@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — feature/rework branch
 
+### Fixed — Table Column Width Shifting on Filter
+- All tables used `table-layout: auto` (browser default), which recalculates column widths based on content every time the data changes — causing columns to "dance" when filtering
+- Switched to `table-layout: fixed` with explicit `<colgroup>` widths on all three table components:
+  - **`src/components/servers/ServerTable.jsx`** — 8 columns with fixed pixel widths
+  - **`src/components/inventory/InventoryTable.jsx`** — 15 columns with fixed pixel widths; wide columns use `hidden xl:table-column` on `<col>` elements to avoid reserving space below the `xl` breakpoint; added `truncate` to item name and top server cells
+  - **`src/components/delivery/DeliveryTable.jsx`** — 7 columns with fixed pixel widths; added `truncate` to item name cell
+- Column widths now stay constant regardless of which rows are visible
+
 ### Added — Dashboard Market Card Filters
 - **`src/pages/Dashboard.jsx`** — added a filter bar above the Tibia Coin / Gold Token / Silver Token cards with PvP type buttons (All / Open PvP / Optional PvP / Retro Open PvP / Retro Hardcore PvP), BattlEye buttons (All / Green / Yellow), and an "Exclude blocked" checkbox
 - **`src/hooks/useMarketData.js`** — extended to accept `pvpType`, `battleye`, and `excludeBlocked` params; passes them as query strings to the API; re-fetches on filter change with 300ms debounce

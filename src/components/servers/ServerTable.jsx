@@ -8,7 +8,17 @@ const ServerTable = memo(function ServerTable({ servers }) {
   return (
     <div className="bg-gray-800 rounded-lg shadow-lg overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full table-fixed">
+          <colgroup>
+            <col style={{ width: '140px' }} />
+            <col style={{ width: '100px' }} />
+            <col style={{ width: '130px' }} />
+            <col style={{ width: '110px' }} />
+            <col style={{ width: '200px' }} />
+            <col style={{ width: '130px' }} />
+            <col style={{ width: '170px' }} />
+            <col style={{ width: '170px' }} />
+          </colgroup>
           <thead className="bg-gray-700">
             <tr>
               {COLUMNS.map((col) => (

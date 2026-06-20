@@ -56,14 +56,31 @@ const InventoryTable = memo(function InventoryTable({
   return (
     <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
       <div ref={scrollRef} className="overflow-auto max-h-[70vh]">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm table-fixed">
+          <colgroup>
+            <col style={{ width: '180px' }} />
+            <col style={{ width: '70px' }} />
+            <col style={{ width: '90px' }} />
+            <col style={{ width: '90px' }} />
+            <col style={{ width: '90px' }} />
+            <col style={{ width: '100px' }} />
+            <col style={{ width: '100px' }} />
+            <col className="hidden xl:table-column" style={{ width: '100px' }} />
+            <col className="hidden xl:table-column" style={{ width: '100px' }} />
+            <col className="hidden xl:table-column" style={{ width: '80px' }} />
+            <col className="hidden xl:table-column" style={{ width: '80px' }} />
+            <col className="hidden xl:table-column" style={{ width: '80px' }} />
+            <col className="hidden xl:table-column" style={{ width: '80px' }} />
+            <col className="hidden xl:table-column" style={{ width: '200px' }} />
+            <col className="hidden xl:table-column" style={{ width: '70px' }} />
+          </colgroup>
           <thead className="sticky top-0 z-10 bg-gray-800">
             <tr className="border-b border-gray-700 text-gray-400 text-xs uppercase">
               {CORE_COLUMNS.map(([key, label, align]) => (
                 <th
                   key={key}
                   onClick={() => onSort(key)}
-                  className={`${align} px-4 py-3 cursor-pointer hover:text-white select-none`}
+                  className={`${align} px-4 py-3 cursor-pointer hover:text-white select-none whitespace-nowrap overflow-hidden`}
                 >
                   {label}<SortIcon sortKey={key} activeKey={sortKey} sortDir={sortDir} />
                 </th>
@@ -72,7 +89,7 @@ const InventoryTable = memo(function InventoryTable({
                 <th
                   key={key}
                   onClick={() => onSort(key)}
-                  className="text-right px-4 py-3 hidden xl:table-cell cursor-pointer hover:text-white select-none"
+                  className="text-right px-4 py-3 hidden xl:table-cell cursor-pointer hover:text-white select-none whitespace-nowrap overflow-hidden"
                 >
                   {label}<SortIcon sortKey={key} activeKey={sortKey} sortDir={sortDir} />
                 </th>
@@ -91,7 +108,7 @@ const InventoryTable = memo(function InventoryTable({
                   ref={virtualizer.measureElement}
                   className="border-b border-gray-700/50 hover:bg-gray-700/30 transition-colors"
                 >
-                  <td className="px-4 py-3 text-gray-200 font-medium capitalize">
+                  <td className="px-4 py-3 text-gray-200 font-medium capitalize truncate">
                     {item.item_name}
                     {item.tier > 0 && (
                       <span className="ml-2 text-xs text-yellow-400">Tier {item.tier}</span>
@@ -163,7 +180,7 @@ const InventoryTable = memo(function InventoryTable({
                   <td className="px-4 py-3 text-right tabular-nums text-xs hidden xl:table-cell">
                     <span className={liquidityColor(score)}>{score}</span>
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums text-xs hidden xl:table-cell">
+                  <td className="px-4 py-3 text-right tabular-nums text-xs hidden xl:table-cell truncate">
                     {item[topServerNameField]
                       ? <span className="text-gray-200">
                           <span className="text-gray-400">{item[topServerNameField]}: </span>

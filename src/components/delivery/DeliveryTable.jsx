@@ -36,7 +36,16 @@ const DeliveryTable = memo(function DeliveryTable({ items, loading }) {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full table-fixed">
+          <colgroup>
+            <col style={{ width: '260px' }} />
+            <col style={{ width: '130px' }} />
+            <col style={{ width: '150px' }} />
+            <col style={{ width: '150px' }} />
+            <col style={{ width: '130px' }} />
+            <col style={{ width: '130px' }} />
+            <col style={{ width: '130px' }} />
+          </colgroup>
           <thead className="bg-gray-700">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Item</th>
@@ -64,8 +73,8 @@ const DeliveryTable = memo(function DeliveryTable({ items, loading }) {
 
               return (
                 <tr key={item.item_id} className="hover:bg-gray-750">
-                  <td className="px-4 py-3">
-                    <div className="text-white font-medium">{item.item_name}</div>
+                  <td className="px-4 py-3 align-top">
+                    <div className="text-white font-medium truncate">{item.item_name}</div>
                     <div className="text-xs text-gray-500">{item.item_category}</div>
                     <div className="mt-2 flex flex-wrap gap-2">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getSourceMarketValueColor(item.source_market_value)}`}>
