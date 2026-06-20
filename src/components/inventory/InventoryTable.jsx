@@ -106,7 +106,7 @@ const InventoryTable = memo(function InventoryTable({
                   key={item.id}
                   data-index={vRow.index}
                   ref={virtualizer.measureElement}
-                  className="border-b border-gray-700/50 hover:bg-gray-700/30 transition-colors"
+                  className="border-b border-gray-700/50 hover:bg-gray-700/30 transition-[background-color]"
                 >
                   <td className="px-4 py-3 text-gray-200 font-medium capitalize truncate">
                     {item.item_name}
