@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — feature/rework branch
 
+### Fixed — Server Table Divider Flash on Filter Clear
+- **`src/components/servers/ServerTable.jsx`** — `transition-colors` on table rows was animating border color (from `divide-y divide-gray-700`) when new rows appeared, causing a brief white flash on the separation lines when clearing filters (e.g. switching back to "All regions")
+- Replaced with `transition-[background-color]` so only the hover background animates; borders now snap instantly
+
 ### Fixed — Table Column Width Shifting on Filter
 - All tables used `table-layout: auto` (browser default), which recalculates column widths based on content every time the data changes — causing columns to "dance" when filtering
 - Switched to `table-layout: fixed` with explicit `<colgroup>` widths on all three table components:

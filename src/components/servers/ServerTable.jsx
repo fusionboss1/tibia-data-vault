@@ -37,7 +37,7 @@ const ServerTable = memo(function ServerTable({ servers }) {
               </tr>
             ) : (
               servers.map((server) => (
-                <tr key={server.id} className="hover:bg-gray-750 transition-colors">
+                <tr key={server.id} className="hover:bg-gray-750 transition-[background-color]">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-white">{server.name || '-'}</div>
                   </td>
