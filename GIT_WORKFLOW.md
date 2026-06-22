@@ -11,11 +11,13 @@
 ### Main Branches
 
 **`master`** - Production-ready code
+
 - Always stable and deployable
 - Tagged with version numbers (v0.1.0, v0.1.1, etc.)
 - Only merge from `develop` or hotfix branches
 
 **`develop`** - Integration branch for features
+
 - Latest development changes
 - Where feature branches merge into
 - Periodically merged into `master` for releases
@@ -23,17 +25,20 @@
 ### Supporting Branches
 
 **Feature branches** - `feature/feature-name`
+
 - Created from: `develop`
 - Merge back into: `develop`
 - Naming: `feature/add-price-charts`, `feature/user-auth`
 
 **Experimental branches** - `experiment/experiment-name`
+
 - Created from: `develop` or `master`
 - For testing different implementations
 - May be discarded or merged
 - Naming: `experiment/react-query`, `experiment/zustand-state`
 
 **Hotfix branches** - `hotfix/issue-description`
+
 - Created from: `master`
 - Merge back into: `master` AND `develop`
 - For urgent production fixes
@@ -109,11 +114,13 @@ git status
 ### Testing Different Implementations
 
 1. **Create experiment branch from current state**
+
    ```bash
    git checkout -b experiment/try-implementation-a
    ```
 
 2. **Make changes and commit**
+
    ```bash
    # Make your changes
    git add .
@@ -121,6 +128,7 @@ git status
    ```
 
 3. **Switch back to create another experiment**
+
    ```bash
    git checkout master  # or develop
    git checkout -b experiment/try-implementation-b
@@ -129,11 +137,13 @@ git status
    ```
 
 4. **Compare implementations**
+
    ```bash
    git diff experiment/try-implementation-a experiment/try-implementation-b
    ```
 
 5. **Choose winner and merge**
+
    ```bash
    git checkout develop
    git merge experiment/try-implementation-a
@@ -144,13 +154,14 @@ git status
 
 Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
-```
+```text
 <type>: <description>
 
 [optional body]
 ```
 
 **Types:**
+
 - `feat:` - New feature
 - `fix:` - Bug fix
 - `docs:` - Documentation changes
@@ -162,6 +173,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 - `experiment:` - Experimental changes
 
 **Examples:**
+
 ```bash
 git commit -m "feat: add price history chart to dashboard"
 git commit -m "fix: resolve API timeout on large datasets"
@@ -202,7 +214,7 @@ git tag v0.1.2
 
 ## Current Repository State
 
-```
+```text
 master (v0.1.1) — remote origin/master
   └─ develop
        └─ feature/rework ← You are here (uncommitted changes)
@@ -211,6 +223,7 @@ master (v0.1.1) — remote origin/master
 ```
 
 **Pending actions on `feature/rework`:**
+
 1. Commit all current changes with appropriate message(s)
 2. Merge into `develop` when ready
 3. Merge `develop` into `master` and tag as new version for release

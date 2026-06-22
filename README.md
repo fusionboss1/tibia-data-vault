@@ -62,7 +62,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history and changes.
 
 ## Project Structure
 
-```
+```text
 tibia-data-vault/
 ├── backend/                # Python backend package
 │   ├── __init__.py
@@ -150,12 +150,14 @@ tibia-data-vault/
 ### Setup
 
 1. **Clone the repository**
+
    ```bash
    git clone <repository-url>
    cd tibia-data-vault
    ```
 
 2. **Set up Python virtual environment**
+
    ```bash
    python -m venv .venv
    # Windows
@@ -165,16 +167,19 @@ tibia-data-vault/
    ```
 
 3. **Install Python dependencies**
+
    ```bash
    pip install -r requirements.txt
    ```
-   
+
    Or manually:
+
    ```bash
    pip install flask flask-cors pydantic requests python-dotenv
    ```
 
 4. **Install Node.js dependencies**
+
    ```bash
    pnpm install
    ```
@@ -243,6 +248,7 @@ python generate_item_prices.py
 ```
 
 The script will ask:
+
 1. **Server type** — which market averages to use (Global / Optional PvP / Optional PvP Green BattlEye)
 2. **Confidence threshold** (0.0–1.0, default 0.3) — how strict to be about data quality; higher = fewer items but more accurate
 
@@ -253,6 +259,7 @@ Items are excluded if their market price doesn't beat the NPC buy price, or if t
 Alternatively, start services separately:
 
 **Terminal 1 - API:**
+
 ```bash
 # Option 1: Direct module execution (recommended)
 python -m backend.api
@@ -262,6 +269,7 @@ python api.py
 ```
 
 **Terminal 2 - Frontend:**
+
 ```bash
 pnpm dev
 ```
@@ -290,9 +298,11 @@ Available environment variables:
 ### Health & Status
 
 #### GET /api/health
+
 Health check endpoint with database connectivity status.
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -313,6 +323,7 @@ Health check endpoint with database connectivity status.
 ### Servers
 
 #### GET /api/servers
+
 Returns all servers with optional filtering.
 
 **Query Parameters:**
@@ -322,6 +333,7 @@ Returns all servers with optional filtering.
 - `battleye` — Filter by BattlEye status (Green, Yellow)
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -345,11 +357,13 @@ Returns all servers with optional filtering.
 ```
 
 #### GET /api/servers/:id
+
 Returns a specific server by ID.
 
 ### Items
 
 #### GET /api/items
+
 Returns all items with optional filtering and pagination.
 
 **Query Parameters:**
@@ -361,11 +375,13 @@ Returns all items with optional filtering and pagination.
 - `offset` — Pagination offset (default: 0)
 
 #### GET /api/items/:id
+
 Returns a specific item by ID.
 
 ### Market Data
 
 #### GET /api/market/current
+
 Returns current market data with optional filtering.
 
 **Query Parameters:**
@@ -375,6 +391,7 @@ Returns current market data with optional filtering.
 - `limit` — Maximum records (default: 1000)
 
 #### GET /api/market/history
+
 Returns historical market data.
 
 **Query Parameters:**
@@ -384,6 +401,7 @@ Returns historical market data.
 - `limit` — Maximum records (default: 1000)
 
 #### GET /api/market/stats
+
 Returns market statistics summary including:
 
 - Total current/history record counts
@@ -391,9 +409,11 @@ Returns market statistics summary including:
 - Last update timestamps per server
 
 #### GET /api/market/global-key-items
+
 Returns aggregated global market data for key items (Tibia Coins, Gold Token, Silver Token).
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -420,6 +440,7 @@ Returns aggregated global market data for key items (Tibia Coins, Gold Token, Si
 ### Inventory
 
 #### GET /api/inventory
+
 Returns stash inventory with full pricing signals.
 
 **Query Parameters:**
@@ -433,17 +454,21 @@ Returns stash inventory with full pricing signals.
 **Response fields per item:** `id`, `item_id`, `item_name`, `quantity`, `category`, `tier`, `best_npc_buy_price`, `best_npc_sell_price`, `market_buy_offer`, `market_sell_offer`, `server_buy_orders`, `server_sell_orders`, `price_age_hours`, `global_servers`, `active_servers`, `global_avg_buy`, `global_avg_sell`, `opt_pvp_avg_buy`, `opt_pvp_avg_sell`, `opt_pvp_green_avg_buy`, `opt_pvp_green_avg_sell`, `vs_global_pct`, `top_server_name`, `top_server_buy`, `top_server_sell`, `opt_pvp_top_server_name`, `opt_pvp_top_server_buy`, `opt_pvp_top_server_sell`, `opt_pvp_green_top_server_name`, `opt_pvp_green_top_server_buy`, `opt_pvp_green_top_server_sell`, `total_value`, `total_value_sell`
 
 #### GET /api/inventory/categories
+
 Returns distinct categories of items currently in the stash.
 
 #### POST /api/inventory/import
+
 Parses server log text and **replaces** quantities for matched items in `stash_inventory` (upsert by `item_id` — not additive).
 
 **Request body:**
+
 ```json
 { "log_text": "19:00:00 Retrieved 3x Gold Coin.\n..." }
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -459,6 +484,7 @@ Parses server log text and **replaces** quantities for matched items in `stash_i
 ### Export Opportunities
 
 #### GET /api/export/opportunities
+
 Returns export opportunities from a source server to Optional PvP servers.
 
 **Query Parameters:**
@@ -467,6 +493,7 @@ Returns export opportunities from a source server to Optional PvP servers.
 - `item_name` — Filter by item name (optional, partial match)
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -561,6 +588,7 @@ Returns export opportunities from a source server to Optional PvP servers.
 #### `stash_inventory`
 
 Created by `scripts/migrate_inventory.py`.
+
 - `id`: Primary key (auto-increment)
 - `item_id`: FK to `items` (ON DELETE SET NULL)
 - `item_name`: TEXT NOT NULL COLLATE NOCASE — denormalized item name
@@ -572,6 +600,7 @@ Created by `scripts/migrate_inventory.py`.
 #### `stash_log_imports`
 
 Created by `scripts/migrate_inventory.py`. Audit log of raw import pastes (stored but not currently queried by the API).
+
 - `id`: Primary key (auto-increment)
 - `raw_text`: TEXT NOT NULL — full pasted log
 - `imported_at`: DATETIME DEFAULT now
@@ -584,6 +613,7 @@ Created by `scripts/migrate_inventory.py`. Audit log of raw import pastes (store
 Precomputed per-item global market aggregates, rebuilt by `scripts/fetch_market.py` after each server fetch via `INSERT OR REPLACE`. **Must be pre-created before first use** — run `scripts/migrate_inventory.py`.
 
 All averages are **activity-weighted** (`SUM(price × activity) / SUM(activity)`, where activity = `buy_offers + sell_offers`).
+
 - `item_id`: Primary key (FK to `items`)
 - `global_servers`: Total servers carrying this item
 - `active_servers`: Servers with `buy_offers + sell_offers > 0`
@@ -682,7 +712,6 @@ The built files will be in the `dist/` directory.
 ```bash
 pnpm preview
 ```
-
 
 ## License
 
