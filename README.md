@@ -4,9 +4,7 @@ A web application for browsing and managing Tibia game server data.
 
 ## Version
 
-Current version: 0.4.0 — `feature/rework` branch contains unreleased modularization and performance improvements (see [Unreleased] in CHANGELOG)
-
-See [CHANGELOG.md](CHANGELOG.md) for version history and changes.
+Current version: **0.5.0** — `feature/rework` merged into `master`. See [CHANGELOG.md](CHANGELOG.md) for the full list of changes in this release.
 
 ## Features
 

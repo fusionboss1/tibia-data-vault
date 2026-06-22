@@ -5,7 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — feature/rework branch
+## [0.5.0] - 2026-06-23
+
+*Branches merged: `feature/rework` → `master`. All changes below were developed on `feature/rework` and are now part of the main release.*
+
+### Refactored — Inventory Page Simplification
+
+- Stripped all derived/computed fields from the Inventory page — only raw data returned by the tibiamarket.top API is shown
+- **Backend (`backend/routes/inventory.py`)** — removed all `market_summary` JOINs and derived columns (`global_avg_*`, `opt_pvp_*`, `top_server_*`, `active_servers`, `global_servers`, `top_activity`, `vs_global_pct`, `price_age_hours`, `total_value`, `total_value_sell`, `grand_total_value`)
+- **Frontend** — reduced `InventoryTable` to 6 columns (Item, Qty, NPC Buy, NPC Sell, Mkt Buy, Mkt Sell); removed `priceFilter` and `minLiquidity` dropdowns from `InventoryFilters`; removed `fieldMap`, totals, and liquidity logic from `useInventoryTable` and `inventory.js`
+- Table panel now fills viewport height dynamically (`calc(100vh - 220px)`) instead of a fixed `max-h`
 
 ### Fixed — Feature Flags Normalization
 
