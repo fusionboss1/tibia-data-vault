@@ -3,8 +3,6 @@ import { Search, RefreshCw, Upload } from 'lucide-react'
 
 function InventoryFilters({
   search, onSearch,
-  priceFilter, onPriceFilter,
-  minLiquidity, onMinLiquidity,
   weeklyOnly, onWeeklyOnly,
   selectedCategory, onCategory, categories,
   selectedServerId, onServerId, servers,
@@ -23,24 +21,6 @@ function InventoryFilters({
           className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-9 pr-4 py-2 text-sm text-gray-200 focus:outline-none focus:border-blue-500"
         />
       </div>
-      <select
-        value={priceFilter}
-        onChange={e => onPriceFilter(e.target.value)}
-        className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-blue-500"
-      >
-        <option value="all">Global avg (all servers)</option>
-        <option value="opt_pvp">Optional PvP only</option>
-        <option value="opt_pvp_green">Optional PvP + Green BattlEye</option>
-      </select>
-      <select
-        value={minLiquidity}
-        onChange={e => onMinLiquidity(Number(e.target.value))}
-        className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-blue-500"
-      >
-        <option value={0}>All liquidity</option>
-        <option value={40}>Medium+ (≥40)</option>
-        <option value={70}>High only (≥70)</option>
-      </select>
       <label className="flex items-center gap-2 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg cursor-pointer select-none hover:border-gray-500 transition-colors">
         <input
           type="checkbox"
@@ -91,10 +71,6 @@ function InventoryFilters({
 InventoryFilters.propTypes = {
   search: PropTypes.string.isRequired,
   onSearch: PropTypes.func.isRequired,
-  priceFilter: PropTypes.string.isRequired,
-  onPriceFilter: PropTypes.func.isRequired,
-  minLiquidity: PropTypes.number.isRequired,
-  onMinLiquidity: PropTypes.func.isRequired,
   weeklyOnly: PropTypes.bool.isRequired,
   onWeeklyOnly: PropTypes.func.isRequired,
   selectedCategory: PropTypes.string.isRequired,

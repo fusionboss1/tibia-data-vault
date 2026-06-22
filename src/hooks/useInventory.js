@@ -5,7 +5,6 @@ export const useInventory = () => {
   const [inventory, setInventory] = useState([])
   const [categories, setCategories] = useState([])
   const [total, setTotal] = useState(0)
-  const [grandTotalValue, setGrandTotalValue] = useState(0)
   const [loading, setLoading] = useState(false)
   const [importing, setImporting] = useState(false)
   const [logText, setLogText] = useState('')
@@ -16,7 +15,6 @@ export const useInventory = () => {
   const [selectedCategory, setSelectedCategory] = useState('')
   const [selectedServerId, setSelectedServerId] = useState('')
   const [weeklyOnly, setWeeklyOnly] = useState(false)
-  const [priceFilter, setPriceFilter] = useState('opt_pvp')
 
   const fetchInventory = useCallback(async () => {
     setLoading(true)
@@ -27,7 +25,6 @@ export const useInventory = () => {
       if (selectedCategory) params.set('category', selectedCategory)
       if (selectedServerId) params.set('server_id', selectedServerId)
       if (weeklyOnly) params.set('weekly_only', '1')
-      if (priceFilter !== 'all') params.set('price_filter', priceFilter)
       const res = await fetch(
         `${API_BASE_URL}${API_ENDPOINTS.INVENTORY}?${params}`,
         { signal: controller.signal }
@@ -36,7 +33,6 @@ export const useInventory = () => {
       if (json.success) {
         setInventory(json.data.inventory)
         setTotal(json.data.total_items)
-        setGrandTotalValue(json.data.grand_total_value || 0)
       } else {
         setError(json.error || 'Failed to load inventory')
       }
@@ -47,7 +43,7 @@ export const useInventory = () => {
       setLoading(false)
     }
     return () => controller.abort()
-  }, [selectedCategory, selectedServerId, weeklyOnly, priceFilter])
+  }, [selectedCategory, selectedServerId, weeklyOnly])
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -92,7 +88,7 @@ export const useInventory = () => {
 
   return {
     inventory, categories,
-    total, grandTotalValue,
+    total,
     loading, importing,
     logText, setLogText,
     showImport, setShowImport,
@@ -101,7 +97,6 @@ export const useInventory = () => {
     selectedCategory, setSelectedCategory,
     selectedServerId, setSelectedServerId,
     weeklyOnly, setWeeklyOnly,
-    priceFilter, setPriceFilter,
     fetchInventory, handleImport,
   }
 }

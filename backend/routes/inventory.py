@@ -52,50 +52,10 @@ def get_inventory():
                     i.best_npc_sell_npcs,
                     mc.buy_offer AS market_buy_offer,
                     mc.sell_offer AS market_sell_offer,
-                    mc.buy_offers AS server_buy_orders,
-                    mc.sell_offers AS server_sell_orders,
-                    mc.time AS price_time,
-                    CAST((strftime('%s', 'now') - mc.time) / 3600.0 AS INTEGER) AS price_age_hours,
-                    ms.global_servers,
-                    ms.active_servers,
-                    ms.global_avg_buy,
-                    ms.global_avg_sell,
-                    ms.opt_pvp_avg_buy,
-                    ms.opt_pvp_avg_sell,
-                    ms.opt_pvp_green_avg_buy,
-                    ms.opt_pvp_green_avg_sell,
-                    CASE
-                        WHEN ms.global_avg_buy > 0 AND mc.buy_offer > 0
-                        THEN ROUND((mc.buy_offer - ms.global_avg_buy) * 100.0 / ms.global_avg_buy, 1)
-                        ELSE NULL
-                    END AS vs_global_pct,
-                    ts.name AS top_server_name,
-                    ms.top_server_buy,
-                    ms.top_server_sell,
-                    ms.top_activity,
-                    ts1.name AS opt_pvp_top_server_name,
-                    ms.opt_pvp_top_server_buy,
-                    ms.opt_pvp_top_server_sell,
-                    ts2.name AS opt_pvp_green_top_server_name,
-                    ms.opt_pvp_green_top_server_buy,
-                    ms.opt_pvp_green_top_server_sell,
-                    si.quantity * CASE
-                        WHEN COALESCE(mc.buy_offer, 0) > COALESCE(i.best_npc_buy_price, 0)
-                        THEN mc.buy_offer
-                        ELSE COALESCE(i.best_npc_buy_price, 0)
-                    END AS total_value,
-                    CASE
-                        WHEN COALESCE(mc.sell_offer, 0) > 0
-                        THEN si.quantity * mc.sell_offer
-                        ELSE NULL
-                    END AS total_value_sell
+                    mc.time AS price_time
                 FROM stash_inventory si
                 JOIN items i ON i.id = si.item_id
                 LEFT JOIN market_current mc ON mc.item_id = si.item_id AND mc.server_id = ?
-                LEFT JOIN market_summary ms ON ms.item_id = si.item_id
-                LEFT JOIN servers ts  ON ts.id  = ms.top_server_id
-                LEFT JOIN servers ts1 ON ts1.id = ms.opt_pvp_top_server_id
-                LEFT JOIN servers ts2 ON ts2.id = ms.opt_pvp_green_top_server_id
                 LEFT JOIN weekly_delivery_items wdi ON wdi.item_id = si.item_id
                 WHERE 1=1
             """
@@ -122,14 +82,11 @@ def get_inventory():
             )
             total = cursor.fetchone()["count"]
 
-            grand_total_value = sum(item["total_value"] or 0 for item in items)
-
             response = ApiResponse(
                 success=True,
                 data={
                     "inventory": items,
                     "total_items": total,
-                    "grand_total_value": grand_total_value,
                     "server_id": server_id
                 },
                 count=len(items)
