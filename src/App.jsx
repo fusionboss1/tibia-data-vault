@@ -23,11 +23,13 @@ function App() {
       <div className="flex min-h-screen bg-gray-900 text-gray-100">
         <Sidebar currentPage={currentPage} onNavigate={handleNavigate} />
         <div className="flex-1">
-          <div className={currentPage === 'dashboard' ? '' : 'hidden'}><Dashboard onNavigate={handleNavigate} /></div>
-          {mountedPages.has('servers') && (
+          {isFeatureEnabled('DASHBOARD') && (
+            <div className={currentPage === 'dashboard' ? '' : 'hidden'}><Dashboard onNavigate={handleNavigate} /></div>
+          )}
+          {isFeatureEnabled('SERVERS') && mountedPages.has('servers') && (
             <div className={currentPage === 'servers' ? '' : 'hidden'}><Servers /></div>
           )}
-          {mountedPages.has('delivery') && (
+          {isFeatureEnabled('WEEKLY_DELIVERY') && mountedPages.has('delivery') && (
             <div className={currentPage === 'delivery' ? '' : 'hidden'}><WeeklyDelivery /></div>
           )}
           {isFeatureEnabled('INVENTORY') && mountedPages.has('inventory') && (

@@ -7,13 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — feature/rework branch
 
+### Fixed — Feature Flags Normalization
+
+- All sidebar navigation items now consistently use the feature flags system
+- Added `DASHBOARD` flag to `src/constants/features.js` (previously hardcoded)
+- Added `feature` property to all `NAV_ITEMS` in `src/components/layout/Sidebar.jsx`:
+  - Dashboard → `feature: 'DASHBOARD'`
+  - Server Browser → `feature: 'SERVERS'`
+  - Weekly Delivery → `feature: 'WEEKLY_DELIVERY'`
+  - Stash Inventory → `feature: 'INVENTORY'` (already had this)
+- Wrapped all route renders in `src/App.jsx` with `isFeatureEnabled()` checks
+- Removed stale `EXPORTEITOR` flag from `FEATURES` object (feature already archived)
+- Toggling any flag in `features.js` now properly hides/shows both the sidebar item and the route
+
 ### Fixed — Table Row Border Flash on Filter Change
+
 - `transition-colors` on table rows was animating **border color** in addition to background, causing a brief white flash on row divider lines when filtering adds or removes rows
 - Scoped to `transition-[background-color]` in all affected table components so only the hover background animates; borders snap instantly:
   - **`src/components/servers/ServerTable.jsx`** — triggered when clearing region filter back to "All regions"
   - **`src/components/inventory/InventoryTable.jsx`** — same issue on virtual rows; applied same fix
 
 ### Fixed — Table Column Width Shifting on Filter
+
 - All tables used `table-layout: auto` (browser default), which recalculates column widths based on content every time the data changes — causing columns to "dance" when filtering
 - Switched to `table-layout: fixed` with explicit `<colgroup>` widths on all three table components:
   - **`src/components/servers/ServerTable.jsx`** — 8 columns with fixed pixel widths
@@ -22,11 +37,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Column widths now stay constant regardless of which rows are visible
 
 ### Added — Dashboard Market Card Filters
+
 - **`src/pages/Dashboard.jsx`** — added a filter bar above the Tibia Coin / Gold Token / Silver Token cards with PvP type buttons (All / Open PvP / Optional PvP / Retro Open PvP / Retro Hardcore PvP), BattlEye buttons (All / Green / Yellow), and an "Exclude blocked" checkbox
 - **`src/hooks/useMarketData.js`** — extended to accept `pvpType`, `battleye`, and `excludeBlocked` params; passes them as query strings to the API; re-fetches on filter change with 300ms debounce
 - **`backend/routes/market.py`** — `/api/market/global-key-items` now accepts `pvp_type`, `battleye`, and `exclude_blocked` query params, filtering both the aggregated prices and the `total_servers` coverage count accordingly
 
 ### Added — Item Price Generator Script (`generate_item_prices.py`)
+
 - New standalone script at project root that generates a `output_cache.json` file for use as custom item prices in the Tibia game client
 - Reads active items from `weekly_delivery_items`, looks up averages in `market_summary`, discards items where the market price doesn't exceed NPC price
 - Calculates a confidence score per item (0–1) based on active server count, transaction activity, and buy/sell spread; items below the threshold are skipped
@@ -34,12 +51,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Outputs only `customSalePrices` — no `primaryLootValueSources` — so the game keeps NPC buy value as the default source and only overrides specific items with global market-based prices
 
 ### Fixed — Market Fetch: New Item IDs Not Inserted (`scripts/fetch_market.py`)
+
 - When the market API returned data for item IDs not yet in the local `items` table, those items were silently skipped
 - Added `ensure_items_exist()` function: on each fetch, it detects unknown item IDs, fetches their metadata from the API (`/item_metadata`), and inserts them into the `items` table before upserting market data
 - Added `item_metadata.json` at project root as a local cache — the script loads from it first and only calls the API for IDs not found in the file
 - Added `ITEM_METADATA_PATH` to `backend/config.py` and exported from `backend/__init__.py`
 
 ### Deprecated — Exporteitor (pending full rework)
+
 - `src/pages/Exporteitor.jsx` and `src/hooks/useStashExportPlan.js` have been archived (moved to `.archive/`)
 - The page is no longer reachable from the sidebar while under rework
 - Backend endpoints `GET /api/export/stash-plan` and `GET /api/market/item-servers` (added in a prior session) remain in `backend/api.py` and will be re-evaluated when the new Exporteitor is built
@@ -50,7 +69,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 `backend/api.py` was 1423 lines with all endpoints in a single file. It was split into a `backend/routes/` package using Flask Blueprints — one module per domain.
 
 | New file | Endpoints moved |
-|---|---|
+| --- | --- |
 | `backend/routes/health.py` | `GET /api/health` |
 | `backend/routes/servers.py` | `GET /api/servers`, `GET /api/servers/<id>` |
 | `backend/routes/items.py` | `GET /api/items`, `GET /api/items/<id>` |
@@ -66,6 +85,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Large monolithic page files were broken into focused, single-purpose pieces.
 
 #### `src/pages/Inventory.jsx` (~554 lines → ~100 lines)
+
 - Extracted data-fetching and import logic into `src/hooks/useInventory.js`
 - Extracted filter bar into `src/components/inventory/InventoryFilters.jsx`
 - Extracted sortable table into `src/components/inventory/InventoryTable.jsx`
@@ -73,12 +93,14 @@ Large monolithic page files were broken into focused, single-purpose pieces.
 - Page now only composes these pieces together
 
 #### `src/pages/Inventory.jsx` — further modularization
+
 - Extracted pure inventory helpers (`liquidityScore`, `liquidityColor`, `deriveMarketFields`, `filterInventoryItems`, `sortInventoryItems`, `calculateInventoryTotals`) to `src/utils/inventory.js`
 - Extracted table state and derived data (search, liquidity filter, sort, filtered items, totals) into new `src/hooks/useInventoryTable.js`
 - `InventoryTable` now imports `liquidityScore`/`liquidityColor` directly from utils instead of receiving them as props
 - Component now only imports UI pieces and delegates all data logic to hooks
 
 #### `src/pages/WeeklyDelivery.jsx` (~391 lines → ~97 lines)
+
 - Extracted filter/stats bar into `src/components/delivery/DeliveryFilters.jsx`
 - Extracted sortable table into `src/components/delivery/DeliveryTable.jsx`
 - Moved all pure helper functions (`formatSignedPrice`, `getDeliveryMargin`, `getDeliverySuggestedAction`, `getSourceMarketValueColor`) to `src/utils/formatters.js`
@@ -87,12 +109,14 @@ Large monolithic page files were broken into focused, single-purpose pieces.
 ### Added — Performance Improvements
 
 #### 1. Lazy Page Mounting (`src/App.jsx`)
+
 - Pages are no longer all mounted on app load
 - A page component is only created the first time the user navigates to it
 - After that first visit it stays mounted but hidden, so switching back is instant
 - Eliminates all API calls from unvisited pages on startup
 
 #### 2. Shared Server Data (`src/contexts/ServersContext.jsx`) — new file
+
 - Created `ServersContext` that calls `useServers()` exactly once
 - Wrapped the entire app with `ServersProvider` in `App.jsx`
 - `src/pages/Servers.jsx`, `src/pages/WeeklyDelivery.jsx`, `src/pages/Inventory.jsx` now consume `useServersContext()` instead of calling `useServers()` independently
@@ -100,6 +124,7 @@ Large monolithic page files were broken into focused, single-purpose pieces.
 - Eliminates 2–3 redundant `/api/servers` calls that previously fired simultaneously on load
 
 #### 3. Virtual Scrolling on Inventory Table (`src/components/inventory/InventoryTable.jsx`)
+
 - Installed `@tanstack/react-virtual` (v3)
 - The `<tbody>` now only renders the rows visible in the viewport (~15–20 at a time)
 - Padding rows above and below maintain correct scroll position
@@ -107,21 +132,25 @@ Large monolithic page files were broken into focused, single-purpose pieces.
 - Drastically reduces DOM size for inventories with hundreds of items
 
 #### 4. Debounced Market Data Fetching (`src/hooks/useMarketData.js`)
+
 - Added a 300ms debounce before the `/api/market/global-key-items` fetch fires
 - Rapid filter changes on the Dashboard (e.g. clicking PvP type then BattlEye) now wait until the user stops clicking before sending a request
 - Prevents one API call per button click when multiple filters are changed quickly
 
 #### 5. `React.memo` on Table Components
+
 - `src/components/inventory/InventoryTable.jsx` — wrapped with `React.memo`
 - `src/components/delivery/DeliveryTable.jsx` — wrapped with `React.memo`
 - `src/components/delivery/DeliveryFilters.jsx` — wrapped with `React.memo`
 - Components now skip re-rendering when their props have not changed
 
 #### 6. Memoized Field Name Derivations (`src/pages/Inventory.jsx`)
+
 - The 5 dynamic field names (`avgBuyField`, `avgSellField`, `topServerNameField`, `topServerBuyField`, `topServerSellField`) that depend on `priceFilter` are now wrapped in a single `useMemo`
 - Previously recomputed on every render, which cascaded into unnecessary re-filtering of the full item list
 
 #### 7. Cached Number Formatter
+
 - `new Intl.NumberFormat('en-US')` is now a module-level constant `NUMBER_FMT` in:
   - `src/components/inventory/InventoryTable.jsx`
   - `src/components/delivery/DeliveryTable.jsx`
@@ -132,6 +161,7 @@ Large monolithic page files were broken into focused, single-purpose pieces.
 ## [0.4.0] - 2026-05-27
 
 ### Added — Feature Flags System
+
 - **Centralized feature configuration** (`src/constants/features.js`)
   - `FEATURES` object controls which features are visible in production
   - `isFeatureEnabled()` helper for conditional rendering
@@ -160,6 +190,7 @@ Large monolithic page files were broken into focused, single-purpose pieces.
 - **New React Hook** — `useWeeklyDeliveryItems.js` for data fetching
 
 ### Technical Changes — Python Import Refactoring
+
 - **Scripts now run as modules** — Changed from `python scripts/fetch_market.py` to `python -m scripts.fetch_market`
 - Created `scripts/__init__.py` to make `scripts` a proper Python package
 - Removed all `sys.path.insert` workarounds from scripts (`fetch_market.py`, `migrate.py`, `import_weekly_delivery_items.py`)
@@ -168,12 +199,14 @@ Large monolithic page files were broken into focused, single-purpose pieces.
 ### Added — Inventory Manager
 
 #### Core Feature
+
 - **Stash Inventory Tracker** (`src/pages/Inventory.jsx`) — Full inventory management page
   - Parses Tibia server log output to import items and quantities into the stash
   - Flat sortable table showing all stash items with pricing signals
   - Summary cards: estimated stash value (NPC/market buy), market sell total, global avg buy/sell totals, top server buy total
 
 #### Import System
+
 - **Log Import Modal** — Paste server log text to update stash quantities
   - Regex-based parser: `^\d{2}:\d{2}:\d{2}\s+Retrieved\s+(\d+)x\s+(.+?)\s*\.$`
   - Priority-based item name matching:
@@ -188,6 +221,7 @@ Large monolithic page files were broken into focused, single-purpose pieces.
 - **New Pydantic Models** — `StashImportRequest`, `StashImportResult`, `StashInventoryItem` in `backend/models.py`
 
 #### Pricing Accuracy Signals
+
 All signals are precomputed in `market_summary` and joined at query time — no expensive subqueries at runtime.
 
 - **Per-server prices** — `market_buy_offer`, `market_sell_offer` from selected server
@@ -211,13 +245,14 @@ All signals are precomputed in `market_summary` and joined at query time — no 
   - Items with no market data (null `global_servers`) score 0 and pass the "All liquidity" filter
 
 #### New Database Table — `market_summary`
+
 Precomputed per-item global market aggregates, rebuilt after each server fetch in `scripts/fetch_market.py`.
 **Must be created manually before first use** — `rebuild_market_summary()` uses `INSERT OR REPLACE` and does not auto-create the table. Run `scripts/migrate_inventory.py` or create it manually first.
 
 Average prices use **activity-weighted means** (`SUM(price × activity) / SUM(activity)` where activity = `buy_offers + sell_offers`).
 
 | Column | Type | Description |
-|---|---|---|
+| --- | --- | --- |
 | `item_id` | INTEGER PK | FK to `items` |
 | `global_servers` | INTEGER | Total servers with data |
 | `active_servers` | INTEGER | Servers with buy_offers+sell_offers > 0 |
@@ -240,10 +275,11 @@ Average prices use **activity-weighted means** (`SUM(price × activity) / SUM(ac
 | `updated_at` | TIMESTAMP | Last rebuild time |
 
 #### New Database Table — `stash_inventory`
+
 Created by `scripts/migrate_inventory.py`.
 
 | Column | Type | Description |
-|---|---|---|
+| --- | --- | --- |
 | `id` | INTEGER PK | Auto-increment |
 | `item_id` | INTEGER | FK to `items` (ON DELETE SET NULL) |
 | `item_name` | TEXT NOT NULL COLLATE NOCASE | Denormalized item name |
@@ -254,10 +290,11 @@ Created by `scripts/migrate_inventory.py`.
 Unique index: `uq_stash_item_name ON stash_inventory (item_name COLLATE NOCASE)`
 
 #### New Database Table — `stash_log_imports`
+
 Created by `scripts/migrate_inventory.py`. Audit log of raw import pastes (currently stored but not queried by the API).
 
 | Column | Type | Description |
-|---|---|---|
+| --- | --- | --- |
 | `id` | INTEGER PK | Auto-increment |
 | `raw_text` | TEXT NOT NULL | Full pasted log text |
 | `imported_at` | DATETIME DEFAULT now | When import ran |
@@ -266,6 +303,7 @@ Created by `scripts/migrate_inventory.py`. Audit log of raw import pastes (curre
 | `notes` | TEXT | Optional free-text notes |
 
 #### New API Endpoints
+
 - **`GET /api/inventory`** — Returns paginated stash with all pricing signals
   - Query params: `search`, `category`, `server_id`, `weekly_only` (0/1), `price_filter` (`all`|`opt_pvp`|`opt_pvp_green`)
   - Returns per-item: NPC prices, server market prices, all global avg variants, all top-server variants, vs_global_pct, price_age_hours, total_value, total_value_sell
@@ -273,6 +311,7 @@ Created by `scripts/migrate_inventory.py`. Audit log of raw import pastes (curre
 - **`POST /api/inventory/import`** — Import/update stash from server log text
 
 #### Frontend Filters & Controls
+
 - **Search** — partial item name match (live, debounced via useCallback)
 - **Category selector** — filter to a single item category
 - **Price filter dropdown** — switches which global avg set is used for display and totals:
@@ -284,6 +323,7 @@ Created by `scripts/migrate_inventory.py`. Audit log of raw import pastes (curre
 - **Server selector** — select which server's live prices to show
 
 #### Frontend Table
+
 - Flat single table (no category grouping)
 - All columns sortable (click header to sort asc/desc, click again to reverse)
 - Columns: Item, Qty, NPC Buy, Mkt Buy, Mkt Sell, Total (Buy), Total (Sell), Glbl Avg Buy, Glbl Avg Sell, Orders, Active, vs Global, Liquidity, Top Server, Age
@@ -291,6 +331,7 @@ Created by `scripts/migrate_inventory.py`. Audit log of raw import pastes (curre
 - Full-width layout (`max-w-full`)
 
 #### `scripts/fetch_market.py` Changes
+
 - Added `rebuild_market_summary(conn)` — computes and upserts all global aggregates
   - Subquery `g`: per-item global + filtered activity-weighted averages
   - Subquery `t`: global top server (highest `buy_offers + sell_offers`, ties by MIN server_id)
@@ -300,6 +341,7 @@ Created by `scripts/migrate_inventory.py`. Audit log of raw import pastes (curre
   - Called after every successful per-server upsert (incremental, not a full wipe)
 
 #### New Migration Script — `scripts/migrate_inventory.py`
+
 - Creates `stash_inventory` and `stash_log_imports` tables
 - Run with: `python -m scripts.migrate_inventory`
 - Safe to re-run (`CREATE TABLE IF NOT EXISTS`)
@@ -307,6 +349,7 @@ Created by `scripts/migrate_inventory.py`. Audit log of raw import pastes (curre
 ## [0.2.0] - 2026-05-26
 
 ### Added
+
 - **Exporteitor Feature** — Advanced export opportunity analyzer for Optional PvP servers
   - **Browse Mode** — Discover and analyze profitable export opportunities
     - View all profitable items to export from source server to Optional PvP targets
@@ -339,11 +382,13 @@ Created by `scripts/migrate_inventory.py`. Audit log of raw import pastes (curre
 - **Updated Navigation** — Added Exporteitor to sidebar with Package icon
 
 ### Changed
+
 - **Client-Side Filtering** — Item name filter now works client-side for instant results (no API lag)
 - **API Response Format** — Export opportunities include both `avg_sell_price` and `avg_buy_price`
 - **Source Price Logic** — Uses `sell_offer` (what you pay to buy) instead of `buy_offer`
 
 ### Technical Details
+
 - Transfer cost calculation: 750 TC × configurable TC price
 - Profit calculation: `(target_price - source_price) / source_price × 100`
 - Only processes items with `sell_offer > 0` on source server
@@ -353,14 +398,16 @@ Created by `scripts/migrate_inventory.py`. Audit log of raw import pastes (curre
 
 ## [0.1.1] - 2026-05-26
 
-### Added
+### Added — Global Market Dashboard
+
 - **Global Market Prices Dashboard** — New dashboard feature displaying global market statistics
   - Shows average buy/sell prices for key items (Tibia Coins, Gold Token, Silver Token)
   - Aggregates data across all servers with coverage statistics
   - Displays total offers, price ranges, and spread percentages
   - Added `GET /api/market/global-key-items` endpoint for aggregated market data
 
-### Changed
+### Changed — Major Refactoring
+
 - **Major Frontend Refactoring** — Complete reorganization following React best practices
   - Created organized folder structure:
     - `src/components/` — Reusable UI components (common, dashboard, servers, layout)
@@ -408,7 +455,8 @@ Created by `scripts/migrate_inventory.py`. Audit log of raw import pastes (curre
   - Added `PYTHONPATH` configuration for module imports
   - Improved process termination (terminate → wait → kill if needed)
 
-### Added
+### Added — Infrastructure & Tooling
+
 - **Environment Configuration** — `.env` file support with `python-dotenv`
   - `TIBIA_DB_PATH` — Database file location
   - `TIBIA_API_HOST` / `TIBIA_API_PORT` / `TIBIA_API_DEBUG` — API server settings
@@ -424,6 +472,7 @@ Created by `scripts/migrate_inventory.py`. Audit log of raw import pastes (curre
   - `GET /api/market/history` — Historical market data
   - `GET /api/market/stats` — Market statistics summary
 - **Standardized API Response Format** — All endpoints return consistent structure:
+
   ```json
   {
     "success": true,
@@ -432,6 +481,7 @@ Created by `scripts/migrate_inventory.py`. Audit log of raw import pastes (curre
     "message": "Optional message"
   }
   ```
+
 - **Error Handling** — Comprehensive error handlers
   - 400 Bad Request with validation details
   - 404 Not Found for missing resources
@@ -476,7 +526,8 @@ Created by `scripts/migrate_inventory.py`. Audit log of raw import pastes (curre
 
 ## [0.1.0] - 2026-05-26
 
-### Added
+### Initial Release
+
 - Initial release of Tibia Data Vault
 - Server browser with filtering capabilities
   - Filter by name, region, PvP type, BattlEye status, and notes

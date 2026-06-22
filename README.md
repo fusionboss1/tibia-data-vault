@@ -18,24 +18,32 @@ See [CHANGELOG.md](CHANGELOG.md) for version history and changes.
   - Summary cards: stash value (buy/sell), global avg buy/sell totals, top-server buy total
   - Filters: search, category, server, price filter scope, liquidity threshold, weekly-delivery-only toggle
   - Ambiguous and unmatched item names reported after import
+
 - **Exporteitor** *(under rework — temporarily unavailable)*: Export opportunity analyzer for Optional PvP servers; being redesigned from scratch on the `feature/rework` branch
+
 - **Weekly Delivery Panel**: Delivery-item lookup and sell/keep decision helper
   - Imports the full delivery pool from TibiaPal into a separate table
   - Shows NPC price, imported demand label, local server price, and global average price
   - Helps decide whether to sell to NPC, list on the market, or export
+
 - **Global Market Dashboard**: Real-time market statistics for key Tibia items
   - Average buy/sell prices across all servers
   - Server coverage and offer counts
   - Price ranges and spread calculations
   - Key items: Tibia Coins, Gold Token, Silver Token
+
 - **Server Browser**: Browse and filter Tibia game servers with detailed information
+
 - **Advanced Filtering**: Filter servers by name, region, PvP type, BattlEye status, and notes
+
 - **Real-time Data**: Data fetched from SQLite database via Flask API
+
 - **Modern UI**: Responsive design with TailwindCSS and Lucide icons
 
 ## Tech Stack
 
 ### Backend
+
 - **Python 3.x**
 - **Flask**: REST API server
 - **Flask-CORS**: Cross-origin resource sharing
@@ -44,6 +52,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history and changes.
 - **SQLite**: Data storage
 
 ### Frontend
+
 - **React 18**: UI framework
 - **Vite**: Build tool and dev server
 - **TailwindCSS**: Styling
@@ -133,6 +142,7 @@ tibia-data-vault/
 ## Installation
 
 ### Prerequisites
+
 - Python 3.x
 - Node.js (v18 or higher)
 - pnpm (install with `npm install -g pnpm`)
@@ -180,6 +190,7 @@ python run.py
 ```
 
 This will:
+
 - Start the Flask API on `http://localhost:5000` (or `TIBIA_API_PORT` from `.env`)
 - Start the React frontend on `http://localhost:3000`
 
@@ -264,6 +275,7 @@ cp .env.example .env
 ```
 
 Available environment variables:
+
 - `TIBIA_DB_PATH` — Database file path (default: `./tibia_data.db`)
 - `TIBIA_API_HOST` — API bind host (default: `0.0.0.0`)
 - `TIBIA_API_PORT` — API port (default: `5000`)
@@ -304,6 +316,7 @@ Health check endpoint with database connectivity status.
 Returns all servers with optional filtering.
 
 **Query Parameters:**
+
 - `region` — Filter by region (EU, NA, SA, OCE)
 - `pvp_type` — Filter by PvP type
 - `battleye` — Filter by BattlEye status (Green, Yellow)
@@ -340,6 +353,7 @@ Returns a specific server by ID.
 Returns all items with optional filtering and pagination.
 
 **Query Parameters:**
+
 - `category` — Filter by item category
 - `tier` — Filter by item tier
 - `search` — Search by name (partial match)
@@ -355,6 +369,7 @@ Returns a specific item by ID.
 Returns current market data with optional filtering.
 
 **Query Parameters:**
+
 - `server_id` — Filter by server ID
 - `item_id` — Filter by item ID
 - `limit` — Maximum records (default: 1000)
@@ -363,12 +378,14 @@ Returns current market data with optional filtering.
 Returns historical market data.
 
 **Query Parameters:**
+
 - `server_id` — Filter by server ID
 - `item_id` — Filter by item ID
 - `limit` — Maximum records (default: 1000)
 
 #### GET /api/market/stats
 Returns market statistics summary including:
+
 - Total current/history record counts
 - Server coverage (items per server)
 - Last update timestamps per server
@@ -406,6 +423,7 @@ Returns aggregated global market data for key items (Tibia Coins, Gold Token, Si
 Returns stash inventory with full pricing signals.
 
 **Query Parameters:**
+
 - `search` — Partial item name match
 - `category` — Filter by item category
 - `server_id` — Server ID for live market prices
@@ -444,6 +462,7 @@ Parses server log text and **replaces** quantities for matched items in `stash_i
 Returns export opportunities from a source server to Optional PvP servers.
 
 **Query Parameters:**
+
 - `source_server_id` — Source server ID (required)
 - `item_name` — Filter by item name (optional, partial match)
 
@@ -486,6 +505,7 @@ Returns export opportunities from a source server to Optional PvP servers.
 ```
 
 **Notes:**
+
 - Only returns items with positive profit margins on listing (sell_price)
 - Excludes blocked servers (servers.notes = 'blocked')
 - Only considers Optional PvP servers as targets
@@ -497,6 +517,7 @@ Returns export opportunities from a source server to Optional PvP servers.
 ### Tables
 
 #### `servers`
+
 - `id`: Primary key
 - `name`: Server name (NOT NULL, UNIQUE)
 - `region`: Geographic region (NOT NULL)
@@ -508,6 +529,7 @@ Returns export opportunities from a source server to Optional PvP servers.
 - `api_last_update`: ISO timestamp of last API update
 
 #### `items`
+
 - `id`: Primary key
 - `name`: Item name (NOT NULL)
 - `category`: Item category (NOT NULL)
@@ -519,6 +541,7 @@ Returns export opportunities from a source server to Optional PvP servers.
 - `best_npc_buy_npcs`: JSON array of NPCs
 
 #### `market_current`
+
 - `item_id`: Foreign key to items (NOT NULL)
 - `server_id`: Foreign key to servers (NOT NULL)
 - `time`: Timestamp (NOT NULL, DEFAULT CURRENT_TIMESTAMP)
@@ -530,11 +553,13 @@ Returns export opportunities from a source server to Optional PvP servers.
 - Foreign keys with ON DELETE CASCADE
 
 #### `market_history`
+
 - Same columns as `market_current` plus `id` (auto-increment)
 - Records historical snapshots
 - Foreign keys with ON DELETE CASCADE
 
 #### `stash_inventory`
+
 Created by `scripts/migrate_inventory.py`.
 - `id`: Primary key (auto-increment)
 - `item_id`: FK to `items` (ON DELETE SET NULL)
@@ -545,6 +570,7 @@ Created by `scripts/migrate_inventory.py`.
 - Unique index on `item_name COLLATE NOCASE`
 
 #### `stash_log_imports`
+
 Created by `scripts/migrate_inventory.py`. Audit log of raw import pastes (stored but not currently queried by the API).
 - `id`: Primary key (auto-increment)
 - `raw_text`: TEXT NOT NULL — full pasted log
@@ -554,6 +580,7 @@ Created by `scripts/migrate_inventory.py`. Audit log of raw import pastes (store
 - `notes`: TEXT (optional)
 
 #### `market_summary`
+
 Precomputed per-item global market aggregates, rebuilt by `scripts/fetch_market.py` after each server fetch via `INSERT OR REPLACE`. **Must be pre-created before first use** — run `scripts/migrate_inventory.py`.
 
 All averages are **activity-weighted** (`SUM(price × activity) / SUM(activity)`, where activity = `buy_offers + sell_offers`).
@@ -569,6 +596,7 @@ All averages are **activity-weighted** (`SUM(price × activity) / SUM(activity)`
 - `updated_at`: Last rebuild timestamp
 
 #### `weekly_delivery_items`
+
 - `item_id`: Primary key (FK to `items`)
 - `is_active`: Whether item is currently in the delivery pool
 - `source_order`: Position in source delivery list
@@ -577,6 +605,7 @@ All averages are **activity-weighted** (`SUM(price × activity) / SUM(activity)`
 - `added_at / updated_at`: Timestamps
 
 ### Indexes
+
 - `idx_market_history_item_time` — For item price history queries
 - `idx_market_history_server_time` — For server-specific history
 - `idx_market_history_item_server_time` — For combined filtering
@@ -592,6 +621,7 @@ The frontend follows React best practices with a modular, component-based archit
 ### Design Principles
 
 **Separation of Concerns:**
+
 - **Pages** (`src/pages/`) - High-level route components
 - **Components** (`src/components/`) - Reusable UI building blocks organized by feature
 - **Hooks** (`src/hooks/`) - Custom hooks for data fetching and state management
@@ -601,6 +631,7 @@ The frontend follows React best practices with a modular, component-based archit
 ### Key Features
 
 **Custom Hooks:**
+
 - `useServers()` - Fetches server data with loading/error states
 - `useServersContext()` - Consumes shared server data from `ServersContext` (no extra fetch)
 - `useMarketData()` - Fetches market data with 300ms debounce on filter changes
@@ -609,9 +640,11 @@ The frontend follows React best practices with a modular, component-based archit
 - `useWeeklyDeliveryItems()` - Fetches weekly delivery items with local and global pricing
 
 **Context Providers:**
+
 - `ServersContext` / `ServersProvider` — Fetches `/api/servers` once at app level; all pages consume the same data without re-fetching
 
 **Reusable Components:**
+
 - **Common**: `LoadingSpinner`, `ErrorMessage`, `FilterInput`, `FilterSelect`
 - **Dashboard**: `MarketItemCard`, `QuickActionCard`
 - **Servers**: `ServerFilters`, `ServerTable`
@@ -620,6 +653,7 @@ The frontend follows React best practices with a modular, component-based archit
 - **Layout**: `Sidebar`, `ErrorBoundary`
 
 **Performance Optimizations:**
+
 - `React.memo` - `InventoryTable`, `DeliveryTable`, `DeliveryFilters` skip re-renders when props are unchanged
 - `useMemo` - Memoizes expensive computations (filtering, field name derivations, calculations)
 - `useCallback` - Stabilizes function references to prevent child re-renders
@@ -628,6 +662,7 @@ The frontend follows React best practices with a modular, component-based archit
 - **Cached formatters** - `Intl.NumberFormat` instance created once per module, reused on every render
 
 **Type Safety & Error Handling:**
+
 - PropTypes validation on all components
 - ErrorBoundary catches React errors and prevents crashes
 - Graceful error states in all data-fetching hooks

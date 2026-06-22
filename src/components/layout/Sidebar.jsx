@@ -3,9 +3,9 @@ import { Server, Home, ClipboardList, Archive } from 'lucide-react'
 import { isFeatureEnabled } from '../../constants/features'
 
 const NAV_ITEMS = [
-  { id: 'dashboard', label: 'Dashboard', icon: Home },
-  { id: 'servers', label: 'Server Browser', icon: Server },
-  { id: 'delivery', label: 'Weekly Delivery', icon: ClipboardList },
+  { id: 'dashboard', label: 'Dashboard', icon: Home, feature: 'DASHBOARD' },
+  { id: 'servers', label: 'Server Browser', icon: Server, feature: 'SERVERS' },
+  { id: 'delivery', label: 'Weekly Delivery', icon: ClipboardList, feature: 'WEEKLY_DELIVERY' },
   { id: 'inventory', label: 'Stash Inventory', icon: Archive, feature: 'INVENTORY' }
 ].filter(item => !item.feature || isFeatureEnabled(item.feature))
 
