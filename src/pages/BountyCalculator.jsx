@@ -41,8 +41,9 @@ function TaskSlot({ index, multiplier, onResultChange, verdict }) {
     const delta     = reward - gapTotal
     const spotTotal = spotEff * T + reward
     const metaTotal = metaEff * T
+    const effPerHour = spotTotal / T  // XP/h including task bonus — fair cross-option comparison
 
-    return { gapTotal, reward, delta, spotTotal, metaTotal, T }
+    return { gapTotal, reward, delta, spotTotal, metaTotal, T, effPerHour }
   }, [rawXph, killsPerH, kills, tier, multiplier])
 
   useMemo(() => { onResultChange(index, result) }, [result])
@@ -160,8 +161,8 @@ function TaskSlot({ index, multiplier, onResultChange, verdict }) {
               {result.delta >= 0 ? '+' : ''}{(result.delta / 1e6).toFixed(3)}M
             </span>
           </div>
-          <div>This spot total: <span className="text-white">{(result.spotTotal / 1e6).toFixed(2)}M XP</span></div>
-          <div>Meta total: <span className="text-white">{(result.metaTotal / 1e6).toFixed(2)}M XP</span></div>
+          <div>Eff XP/h (with task): <span className="text-white">{(result.effPerHour / 1e6).toFixed(2)}M/h</span></div>
+          <div>Meta XP/h: <span className="text-white">{(result.metaTotal / result.T / 1e6).toFixed(2)}M/h</span></div>
         </div>
       )}
     </div>
@@ -186,7 +187,7 @@ function BountyCalculator() {
     if (!allReady) return [null, null, null]
 
     const bestIdx = results.reduce((best, r, i) =>
-      r.spotTotal > results[best].spotTotal ? i : best, 0)
+      r.effPerHour > results[best].effPerHour ? i : best, 0)
     const bestBeatsMeta = results[bestIdx].delta >= 0
 
     return results.map((_, i) => {
