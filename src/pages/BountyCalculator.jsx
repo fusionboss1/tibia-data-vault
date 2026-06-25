@@ -198,7 +198,7 @@ function BountyCalculator() {
   }, [results])
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-8 max-w-7xl">
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-white mb-2 flex items-center gap-3">
           <Target className="w-9 h-9 text-amber-400" />
@@ -245,15 +245,31 @@ function BountyCalculator() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {[0, 1, 2].map(i => (
-          <TaskSlot key={i} index={i} multiplier={multiplier} metaRaw={metaRaw} onResultChange={handleResultChange} verdict={verdicts[i]} />
-        ))}
-      </div>
+      <div className="flex gap-4 items-start">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {[0, 1, 2].map(i => (
+            <TaskSlot key={i} index={i} multiplier={multiplier} metaRaw={metaRaw} onResultChange={handleResultChange} verdict={verdicts[i]} />
+          ))}
+        </div>
 
-      <div className="mt-6 p-4 bg-gray-800/50 border border-gray-700 rounded-xl text-xs text-gray-500">
-        <p className="font-medium text-gray-400 mb-1">How it works</p>
-        <p>For each option, the task duration is <code className="text-gray-300">kills / kill_rate</code> hours. The benchmark earns <code className="text-gray-300">benchmark_raw × multiplier × time</code>. Your option earns <code className="text-gray-300">spot_raw × multiplier × time + flat task XP</code>. The best effective XP/h (including task bonus) wins.</p>
+        <div className="w-64 shrink-0 bg-gray-800 border border-gray-700 rounded-xl p-5 text-sm text-gray-300">
+          <p className="font-bold text-white mb-4 text-base">How to use</p>
+          <ol className="space-y-3 text-xs text-gray-400 list-none">
+            <li className="flex gap-2"><span className="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center shrink-0">1</span><span>Pick the <span className="text-white font-medium">XP period</span> that matches today's event.</span></li>
+            <li className="flex gap-2"><span className="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center shrink-0">2</span><span>Set your <span className="text-white font-medium">benchmark</span> — the raw XP/h of your best meta spot.</span></li>
+            <li className="flex gap-2"><span className="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center shrink-0">3</span><span>Fill in all <span className="text-white font-medium">3 task options</span> from your current reroll: spot XP/h, kill rate, kills required, and tier.</span></li>
+            <li className="flex gap-2"><span className="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center shrink-0">4</span><span>The tool picks the option with the <span className="text-white font-medium">highest effective XP/h</span> (spot rate + task bonus spread over session time).</span></li>
+            <li className="flex gap-2"><span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center shrink-0">✓</span><span><span className="text-emerald-400 font-medium">TAKE IT</span> = that option beats your benchmark. <span className="text-red-400 font-medium">SKIP</span> = go back to meta.</span></li>
+          </ol>
+          <div className="mt-4 pt-4 border-t border-gray-700 text-xs text-gray-500">
+            <p className="mb-1 text-gray-400 font-medium">Tier XP rewards</p>
+            <div className="space-y-1">
+              <div className="flex justify-between"><span className="text-amber-700 font-medium">Bronze ×1</span><span>0.56M – 1.13M</span></div>
+              <div className="flex justify-between"><span className="text-slate-400 font-medium">Silver ×2</span><span>1.13M – 2.25M</span></div>
+              <div className="flex justify-between"><span className="text-yellow-400 font-medium">Gold ×4</span><span>2.25M – 4.50M</span></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

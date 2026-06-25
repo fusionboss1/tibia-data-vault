@@ -10,8 +10,8 @@ import { isFeatureEnabled } from './constants/features'
 import { ServersProvider } from './contexts/ServersContext'
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('dashboard')
-  const [mountedPages, setMountedPages] = useState(new Set(['dashboard']))
+  const [currentPage, setCurrentPage] = useState('bounty')
+  const [mountedPages, setMountedPages] = useState(new Set(['bounty']))
 
   const handleNavigate = (page) => {
     setMountedPages(prev => new Set([...prev, page]))
