@@ -4,12 +4,12 @@
  */
 export const FEATURES = {
   // Released features (always enabled)
-  DASHBOARD: true,
-  SERVERS: true,
+  DASHBOARD: false,
+  SERVERS: false,
   WEEKLY_DELIVERY: false,
 
   // Features in development (disable for production)
-  INVENTORY: true,  // Stash Inventory - still in development
+  INVENTORY: false,
   BOUNTY_CALCULATOR: true,
 }
 
