@@ -1,12 +1,13 @@
 import PropTypes from 'prop-types'
-import { Server, Home, ClipboardList, Archive } from 'lucide-react'
+import { Server, Home, ClipboardList, Archive, Target } from 'lucide-react'
 import { isFeatureEnabled } from '../../constants/features'
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: Home, feature: 'DASHBOARD' },
   { id: 'servers', label: 'Server Browser', icon: Server, feature: 'SERVERS' },
   { id: 'delivery', label: 'Weekly Delivery', icon: ClipboardList, feature: 'WEEKLY_DELIVERY' },
-  { id: 'inventory', label: 'Stash Inventory', icon: Archive, feature: 'INVENTORY' }
+  { id: 'inventory', label: 'Stash Inventory', icon: Archive, feature: 'INVENTORY' },
+  { id: 'bounty', label: 'Bounty Calculator', icon: Target, feature: 'BOUNTY_CALCULATOR' }
 ].filter(item => !item.feature || isFeatureEnabled(item.feature))
 
 function Sidebar({ currentPage, onNavigate }) {

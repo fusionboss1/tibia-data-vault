@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard'
 import Servers from './pages/Servers'
 import WeeklyDelivery from './pages/WeeklyDelivery'
 import Inventory from './pages/Inventory'
+import BountyCalculator from './pages/BountyCalculator'
 import { isFeatureEnabled } from './constants/features'
 import { ServersProvider } from './contexts/ServersContext'
 
@@ -34,6 +35,9 @@ function App() {
           )}
           {isFeatureEnabled('INVENTORY') && mountedPages.has('inventory') && (
             <div className={currentPage === 'inventory' ? '' : 'hidden'}><Inventory /></div>
+          )}
+          {isFeatureEnabled('BOUNTY_CALCULATOR') && mountedPages.has('bounty') && (
+            <div className={currentPage === 'bounty' ? '' : 'hidden'}><BountyCalculator /></div>
           )}
         </div>
       </div>
