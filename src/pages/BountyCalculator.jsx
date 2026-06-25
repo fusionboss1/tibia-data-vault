@@ -187,9 +187,10 @@ function BountyCalculator() {
     const allReady = results.every(r => r !== null)
     if (!allReady) return [null, null, null]
 
+    const metaEffPerHour = metaRaw * multiplier
     const bestIdx = results.reduce((best, r, i) =>
       r.effPerHour > results[best].effPerHour ? i : best, 0)
-    const bestBeatsMeta = results[bestIdx].delta >= 0
+    const bestBeatsMeta = results[bestIdx].effPerHour > metaEffPerHour
 
     return results.map((_, i) => {
       if (!bestBeatsMeta) return 'skip'
