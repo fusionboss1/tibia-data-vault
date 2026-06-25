@@ -14,13 +14,12 @@ const TIERS = [
   { label: 'Gold',   value: 4 },
 ]
 
-const META_RAW = 7_200_000
 
 function taskXp(kills, tierMult) {
   return (562_500 + (kills - 300) * 1_875) * tierMult
 }
 
-function TaskSlot({ index, multiplier, onResultChange, verdict }) {
+function TaskSlot({ index, multiplier, metaRaw, onResultChange, verdict }) {
   const [creature, setCreature]       = useState('')
   const [rawXph, setRawXph]           = useState('')
   const [killsPerH, setKillsPerH]     = useState('')
@@ -33,7 +32,7 @@ function TaskSlot({ index, multiplier, onResultChange, verdict }) {
     const k    = parseInt(kills)
     if (!raw || !kph || !k || raw <= 0 || kph <= 0 || k < 300 || k > 600) return null
 
-    const metaEff   = META_RAW * multiplier
+    const metaEff   = metaRaw * multiplier
     const spotEff   = raw * 1_000_000 * multiplier
     const T         = k / kph
     const gapTotal  = (metaEff - spotEff) * T
@@ -44,7 +43,7 @@ function TaskSlot({ index, multiplier, onResultChange, verdict }) {
     const effPerHour = spotTotal / T  // XP/h including task bonus — fair cross-option comparison
 
     return { gapTotal, reward, delta, spotTotal, metaTotal, T, effPerHour }
-  }, [rawXph, killsPerH, kills, tier, multiplier])
+  }, [rawXph, killsPerH, kills, tier, multiplier, metaRaw])
 
   useMemo(() => { onResultChange(index, result) }, [result])
 
@@ -172,6 +171,8 @@ function TaskSlot({ index, multiplier, onResultChange, verdict }) {
 function BountyCalculator() {
   const [periodIdx, setPeriodIdx] = useState(0)
   const multiplier = PERIODS[periodIdx].multiplier
+  const [metaInput, setMetaInput] = useState('7.2')
+  const metaRaw = (parseFloat(metaInput) || 7.2) * 1_000_000
   const [results, setResults] = useState([null, null, null])
 
   const handleResultChange = useCallback((index, result) => {
@@ -229,21 +230,30 @@ function BountyCalculator() {
           </div>
         </div>
 
-        <div className="mt-3 flex items-center gap-4 text-xs text-gray-400">
-          <span>Benchmark: <span className="text-white font-medium">Roshamuul West — 7.2M raw XP/h</span></span>
-          <span>→ effective: <span className="text-amber-400 font-bold">{(META_RAW * multiplier / 1e6).toFixed(2)}M XP/h</span></span>
+        <div className="mt-3 flex items-center gap-3 flex-wrap text-xs text-gray-400">
+          <span className="shrink-0">Benchmark raw XP/h:</span>
+          <input
+            type="number"
+            value={metaInput}
+            onChange={e => setMetaInput(e.target.value)}
+            step="0.1"
+            min="0"
+            className="w-24 bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm text-white focus:outline-none focus:border-blue-500"
+          />
+          <span className="text-gray-500">M/h</span>
+          <span>→ effective: <span className="text-amber-400 font-bold">{(metaRaw * multiplier / 1e6).toFixed(2)}M XP/h</span></span>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {[0, 1, 2].map(i => (
-          <TaskSlot key={i} index={i} multiplier={multiplier} onResultChange={handleResultChange} verdict={verdicts[i]} />
+          <TaskSlot key={i} index={i} multiplier={multiplier} metaRaw={metaRaw} onResultChange={handleResultChange} verdict={verdicts[i]} />
         ))}
       </div>
 
       <div className="mt-6 p-4 bg-gray-800/50 border border-gray-700 rounded-xl text-xs text-gray-500">
         <p className="font-medium text-gray-400 mb-1">How it works</p>
-        <p>For each option, the task duration is <code className="text-gray-300">kills / kill_rate</code> hours. During that time, Roshamuul earns <code className="text-gray-300">7.2M × multiplier × time</code>. Your option earns <code className="text-gray-300">spot_raw × multiplier × time + flat task XP</code>. If the option total &ge; meta total, take it.</p>
+        <p>For each option, the task duration is <code className="text-gray-300">kills / kill_rate</code> hours. The benchmark earns <code className="text-gray-300">benchmark_raw × multiplier × time</code>. Your option earns <code className="text-gray-300">spot_raw × multiplier × time + flat task XP</code>. The best effective XP/h (including task bonus) wins.</p>
       </div>
     </div>
   )
