@@ -16,7 +16,7 @@ function App() {
     <ErrorBoundary>
       <div className="flex min-h-screen bg-gray-900 text-gray-100">
         <Sidebar currentPage={currentPage} onNavigate={handleNavigate} />
-        <div className="flex-1">
+        <div className="flex-1 pt-14 md:pt-0">
           <BountyCalculator />
         </div>
       </div>

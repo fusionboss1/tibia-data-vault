@@ -199,13 +199,13 @@ function BountyCalculator() {
   }, [results])
 
   return (
-    <div className="p-8 max-w-7xl">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-white mb-2 flex items-center gap-3">
-          <Target className="w-9 h-9 text-amber-400" />
+    <div className="p-4 md:p-8 max-w-7xl">
+      <div className="mb-6">
+        <h1 className="text-2xl md:text-4xl font-bold text-white mb-2 flex items-center gap-3">
+          <Target className="w-7 h-7 md:w-9 md:h-9 text-amber-400" />
           Bounty Calculator
         </h1>
-        <p className="text-gray-400">
+        <p className="text-sm text-gray-400">
           Fill all 3 options, then the best one will be highlighted. Only one can be taken.
         </p>
       </div>
@@ -246,14 +246,14 @@ function BountyCalculator() {
         </div>
       </div>
 
-      <div className="flex gap-4 items-start">
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="flex flex-col xl:flex-row gap-4 items-start">
+        <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4">
           {[0, 1, 2].map(i => (
             <TaskSlot key={i} index={i} multiplier={multiplier} metaRaw={metaRaw} onResultChange={handleResultChange} verdict={verdicts[i]} />
           ))}
         </div>
 
-        <div className="w-64 shrink-0 bg-gray-800 border border-gray-700 rounded-xl p-5 text-sm text-gray-300">
+        <div className="w-full xl:w-64 xl:shrink-0 bg-gray-800 border border-gray-700 rounded-xl p-5 text-sm text-gray-300">
           <p className="font-bold text-white mb-4 text-base">How to use</p>
           <ol className="space-y-3 text-xs text-gray-400 list-none">
             <li className="flex gap-2"><span className="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center shrink-0">1</span><span>Pick the <span className="text-white font-medium">XP period</span> that matches today's event.</span></li>
