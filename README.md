@@ -4,9 +4,16 @@ A web application for browsing and managing Tibia game server data.
 
 ## Version
 
-Current version: **0.5.0** — `feature/rework` merged into `master`. See [CHANGELOG.md](CHANGELOG.md) for the full list of changes in this release.
+Current version: **0.6.0** — Bounty Calculator beta deployed to `https://tibia-bounty-calc.netlify.app` on `feature/bounty-calculator`. See [CHANGELOG.md](CHANGELOG.md) for the full list of changes.
 
 ## Features
+
+- **Bounty Calculator** *(beta — live at [tibia-bounty-calc.netlify.app](https://tibia-bounty-calc.netlify.app))*: Real-time decision tool for Bounty Tasks
+  - Fill in the 3 task options the game offers (spot XP/h, kill rate, kills required, tier)
+  - Compares each option's effective XP/h (spot rate + task bonus spread over session time) against a configurable benchmark spot
+  - Shows **TAKE IT** on the single best option, **SKIP** on all 3 if none beat the benchmark
+  - XP period selector for event multipliers; editable benchmark XP/h
+  - No backend required — runs entirely in the browser
 
 - **Stash Inventory Manager**: Track your in-game stash with rich pricing signals
   - Import items from server log text (paste Retrieved log lines)
@@ -99,7 +106,8 @@ tibia-data-vault/
 │   │   ├── Dashboard.jsx
 │   │   ├── Servers.jsx
 │   │   ├── Inventory.jsx
-│   │   └── WeeklyDelivery.jsx
+│   │   ├── WeeklyDelivery.jsx
+│   │   └── BountyCalculator.jsx  # Standalone, no backend dependency
 │   ├── components/         # Reusable UI components
 │   │   ├── common/         # Generic components (LoadingSpinner, ErrorMessage, etc.)
 │   │   ├── dashboard/      # Dashboard-specific components

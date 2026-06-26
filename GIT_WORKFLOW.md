@@ -215,20 +215,17 @@ git tag v0.1.2
 ## Current Repository State
 
 ```text
-master (v0.1.1) — remote origin/master
+master (v0.5.0) — remote origin/master
   └─ develop
-       └─ feature/rework ← You are here (uncommitted changes)
-            ├─ Frontend modularization (Inventory + WeeklyDelivery split into components/hooks)
-            └─ Performance improvements (lazy mounting, ServersContext, virtual scroll, debounce, memo, cached formatters)
+       └─ feature/bounty-calculator ← active beta branch
+            ├─ BountyCalculator.jsx — standalone task evaluator page
+            ├─ netlify.toml — Netlify build + SPA redirect config
+            ├─ All other features disabled (DASHBOARD, SERVERS, INVENTORY, WEEKLY_DELIVERY = false)
+            └─ Deployed at https://tibia-bounty-calc.netlify.app (auto-deploy on push)
 ```
 
-**Pending actions on `feature/rework`:**
+**Pending actions on `feature/bounty-calculator`:**
 
-1. Commit all current changes with appropriate message(s)
-2. Merge into `develop` when ready
-3. Merge `develop` into `master` and tag as new version for release
-
-## Next Steps
-
-1. Set up remote repository (GitHub/GitLab) when ready
-2. Push branches: `git push -u origin develop`
+1. Collect beta feedback from testers
+2. Add i18n support (Polish, Portuguese, Spanish) when ready
+3. Merge into `develop` → `master` and tag as v0.6.0 when stable

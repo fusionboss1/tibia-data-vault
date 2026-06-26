@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-06-26
+
+*Branch: `feature/bounty-calculator` — deployed to `https://tibia-bounty-calc.netlify.app` for beta testing.*
+
+### Added — Bounty Calculator (`src/pages/BountyCalculator.jsx`)
+
+- New standalone page to decide whether to take or skip a Bounty Task in real time
+- 3-card layout — one card per task option offered by the game
+- Inputs per card: creature name, spot raw XP/h (millions), kill rate (per hour), kills required (300–600), tier (Bronze / Silver / Gold)
+- XP period selector: Jun 25–Jul 2 (×2.25), Jul 3–4 (×4.5), Jul 5 (×3.0), No event (×1.5)
+- Editable benchmark raw XP/h (defaults to 7.2M — Roshamuul West)
+- Verdict logic compares `effPerHour = (spotXP × T + taskReward) / T` across all 3 options; only shows verdict once all 3 cards are filled
+- **TAKE IT** — shown on the single best option if it beats the benchmark effective XP/h
+- **SKIP** — shown on all 3 if even the best option doesn't beat the benchmark (reroll all)
+- Per-card breakdown: task time, task XP reward, gap to cover, net vs meta, effective XP/h with task, meta XP/h
+- Instructions card on the right with numbered steps and tier XP reward reference table
+
+### Added — Netlify Deployment (`netlify.toml`)
+
+- New `netlify.toml` at project root with build command (`pnpm run build`), publish dir (`dist`), and SPA redirect rule
+- Live URL: `https://tibia-bounty-calc.netlify.app` — auto-deploys on push to `feature/bounty-calculator`
+
+### Changed — Beta Branch Isolation (`src/App.jsx`, `src/constants/features.js`)
+
+- All features except `BOUNTY_CALCULATOR` disabled in this branch (`DASHBOARD`, `SERVERS`, `WEEKLY_DELIVERY`, `INVENTORY` all set to `false`)
+- All disabled page imports removed from `App.jsx` — bundle contains only Bounty Calculator code; eliminates all API calls and the `localhost:5000` fallback that was triggering Android local network permission prompts
+- Default page changed to `bounty`
+
+### Fixed — Verdict Logic Bugs
+
+- **Multiple TAKE IT verdicts**: lifted result state to parent component; parent picks the single best option, passes verdict down to each `TaskSlot`
+- **Wrong winner on mixed session lengths**: switched comparison from raw `spotTotal` (total XP accumulated) to `effPerHour` (XP per hour including task bonus) — sessions of different lengths are now compared fairly
+- **All-skip scenario never triggered**: fixed condition from `delta >= 0` to `effPerHour > metaEffPerHour` so all 3 cards correctly show SKIP when none of them beat the benchmark rate
+
 ## [0.5.0] - 2026-06-23
 
 *Branches merged: `feature/rework` → `master`. All changes below were developed on `feature/rework` and are now part of the main release.*
