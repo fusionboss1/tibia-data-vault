@@ -133,7 +133,7 @@ function TaskSlot({ index, multiplier, metaRaw, onResultChange, verdict }) {
         </div>
 
         <div className="col-span-2">
-          <label className="block text-xs text-gray-400 mb-1">Tier <span className="text-gray-500">(color shown in-game)</span></label>
+          <label className="block text-xs text-gray-400 mb-1">TIER</label>
           <div className="flex gap-1">
             {TIERS.map(t => (
               <button

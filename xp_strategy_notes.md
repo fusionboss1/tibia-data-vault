@@ -1,6 +1,7 @@
 # XP Strategy Notes
 
 ## Goal
+
 Build a tool to determine optimal hunting spots during XP boost events,
 factoring in Bounty Tasks as a secondary (tiebreaker) consideration.
 
@@ -13,11 +14,13 @@ factoring in Bounty Tasks as a secondary (tiebreaker) consideration.
 - Tasks have **3 tiers**: Bronze, Silver, Gold.
 
 ### XP Reward Formula (Bronze)
+
 - Base reward at 300 kills: **562,500 XP**
 - Each kill beyond 300 adds: **+1,875 XP**
 - Formula: `562,500 + (kills - 300) × 1,875`
 
 ### Tier Multipliers
+
 | Tier   | Multiplier | Min XP (300 kills) | Max XP (600 kills) |
 |--------|------------|--------------------|--------------------|
 | Bronze | ×1         | 562,500            | 1,125,000          |
@@ -25,11 +28,13 @@ factoring in Bounty Tasks as a secondary (tiebreaker) consideration.
 | Gold   | ×4         | 2,250,000          | 4,500,000          |
 
 ### Key Rule
+
 > **Bounty Task XP is NOT affected by the XP gain multiplier.**
 > The higher the active XP multiplier, the less relevant Bounty Tasks become
 > relative to kill XP — but they are never zero value.
 
 ### Design Principle
+
 > Tasks should act as a **tiebreaker** when two hunting spots are otherwise equal,
 > not as the primary driver of spot selection during XP events.
 
@@ -166,12 +171,14 @@ All XP values are **raw hourly rates** (before multiplier). Kill counts are hour
 ## Events & Multipliers
 
 ### Base Stamina Rules (no events)
+
 - First 3 hours/day = **150% XP** (×1.5) — "premium stamina"
 - After 3 hours = **100% XP** (×1.0) — "normal stamina"
 
-### Active Events
+### Active
+
 | Event | Dates | Effect |
-|---|---|---|
+|---|---|--- |
 | +50% XP from all creatures | June 25 – July 4 (10 days) | Adds to base, then multiplied by everything else |
 | Double XP | July 3 – July 5 (3 days) | ×2 on top of everything |
 
