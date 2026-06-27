@@ -256,6 +256,13 @@ function BountyCalculator() {
           </div>
         </div>
 
+        <div className="mt-4 flex items-center gap-3">
+          <span className="text-xs text-gray-400">Active multiplier:</span>
+          <span className="px-4 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/50 text-amber-300 font-bold text-lg tracking-wide">
+            ×{multiplier % 1 === 0 ? multiplier.toFixed(1) : multiplier}
+          </span>
+        </div>
+
         <div className="mt-3 flex items-center gap-3 flex-wrap text-xs text-gray-400">
           <span className="shrink-0">Benchmark raw XP/h:</span>
           <input
