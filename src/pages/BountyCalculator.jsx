@@ -177,8 +177,7 @@ function BountyCalculator() {
   const [eventIdx, setEventIdx] = useState(0)
   const [staminaIdx, setStaminaIdx] = useState(0)
   const [boost, setBoost] = useState(false)
-  const staminaMult = STAMINA[staminaIdx].multiplier + (boost ? STAMINA[staminaIdx].boostBonus : 0)
-  const multiplier = EVENTS[eventIdx].multiplier * staminaMult
+  const multiplier = EVENTS[eventIdx].multiplier * STAMINA[staminaIdx].multiplier + (boost ? STAMINA[staminaIdx].boostBonus : 0)
   const [metaInput, setMetaInput] = useState('7.2')
   const metaRaw = (parseFloat(metaInput) || 7.2) * 1_000_000
   const [results, setResults] = useState([null, null, null])
