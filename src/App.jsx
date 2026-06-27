@@ -6,6 +6,7 @@ import Servers from './pages/Servers'
 import WeeklyDelivery from './pages/WeeklyDelivery'
 import Inventory from './pages/Inventory'
 import BountyCalculator from './pages/BountyCalculator'
+import MarketBrowser from './pages/MarketBrowser'
 import { isFeatureEnabled } from './constants/features'
 import { ServersProvider } from './contexts/ServersContext'
 
@@ -21,9 +22,9 @@ function App() {
   return (
     <ServersProvider>
     <ErrorBoundary>
-      <div className="flex min-h-screen bg-gray-900 text-gray-100">
+      <div className="flex h-screen bg-gray-900 text-gray-100">
         <Sidebar currentPage={currentPage} onNavigate={handleNavigate} />
-        <div className="flex-1">
+        <div className="flex-1 overflow-auto">
           {isFeatureEnabled('DASHBOARD') && (
             <div className={currentPage === 'dashboard' ? '' : 'hidden'}><Dashboard onNavigate={handleNavigate} /></div>
           )}
@@ -38,6 +39,9 @@ function App() {
           )}
           {isFeatureEnabled('BOUNTY_CALCULATOR') && mountedPages.has('bounty') && (
             <div className={currentPage === 'bounty' ? '' : 'hidden'}><BountyCalculator /></div>
+          )}
+          {isFeatureEnabled('MARKET_BROWSER') && mountedPages.has('market') && (
+            <div className={currentPage === 'market' ? 'h-full' : 'hidden'}><MarketBrowser /></div>
           )}
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useDebounce } from './useDebounce'
 import { API_BASE_URL, API_ENDPOINTS } from '../constants/api'
 
 export const useStashExportPlan = (minCoverage = 0, battleyeFilter = 'all', selectedItems = null, sourceServerId = null) => {
@@ -15,12 +16,7 @@ export const useStashExportPlan = (minCoverage = 0, battleyeFilter = 'all', sele
     [selectedItems]
   )
 
-  const [debouncedKey, setDebouncedKey] = useState(selectedItemsKey)
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedKey(selectedItemsKey), 400)
-    return () => clearTimeout(timer)
-  }, [selectedItemsKey])
+  const debouncedKey = useDebounce(selectedItemsKey)
 
   useEffect(() => {
     const controller = new AbortController()

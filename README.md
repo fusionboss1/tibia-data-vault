@@ -4,9 +4,15 @@ A web application for browsing and managing Tibia game server data.
 
 ## Version
 
-Current version: **0.6.0** — Bounty Calculator beta deployed to `https://tibia-bounty-calc.netlify.app` on `feature/bounty-calculator`. See [CHANGELOG.md](CHANGELOG.md) for the full list of changes.
+Current version: **0.7.0** — Market Browser with Global and Server modes. See [CHANGELOG.md](CHANGELOG.md) for the full list of changes.
 
 ## Features
+
+- **Market Browser**: Browse Tibia market data in two modes
+  - **Global mode**: search and filter all items across all servers; click an item to see per-server prices with stat cards that reflect active filters (PvP type, BattlEye, exclude blocked)
+  - **Server mode**: pick a server to see all items with active offers; compare local sell price against the global average (highlighted green when cheaper); filter the server list by PvP type, BattlEye, exclude blocked, or use the "My server" + "Only compatible servers" toggle to hide servers you can never transfer to or from
+  - Transfer compatibility rules: destination must be same or less permissive PvP type; Yellow BattlEye cannot transfer to Green
+  - Item list supports search and category filtering; order book panel is a placeholder for future live data
 
 - **Bounty Calculator** *(beta — live at [tibia-bounty-calc.netlify.app](https://tibia-bounty-calc.netlify.app))*: Real-time decision tool for Bounty Tasks — no backend required, runs entirely in the browser
   - Fill any of the 3 task option cards; each reacts instantly without needing the others filled
@@ -112,11 +118,17 @@ tibia-data-vault/
 │   │   ├── Servers.jsx
 │   │   ├── Inventory.jsx
 │   │   ├── WeeklyDelivery.jsx
+│   │   ├── MarketBrowser.jsx   # Global + Server mode market browser
 │   │   └── BountyCalculator.jsx  # Standalone, no backend dependency
 │   ├── components/         # Reusable UI components
 │   │   ├── common/         # Generic components (LoadingSpinner, ErrorMessage, etc.)
 │   │   ├── dashboard/      # Dashboard-specific components
 │   │   ├── servers/        # Server browser components
+│   │   ├── market/         # Market browser components
+│   │   │   ├── MarketItemList.jsx    # Paginated sortable item list (global mode)
+│   │   │   ├── MarketItemDetail.jsx  # Stat cards + per-server price table
+│   │   │   ├── MarketServerList.jsx  # Server filter panel with compatibility UI
+│   │   │   └── MarketServerDetail.jsx # Item table with Global Sell column
 │   │   ├── inventory/      # Inventory-specific components
 │   │   │   ├── InventoryFilters.jsx
 │   │   │   ├── InventoryTable.jsx  # Virtual scrolling, React.memo
@@ -126,8 +138,11 @@ tibia-data-vault/
 │   │   │   └── DeliveryTable.jsx   # React.memo
 │   │   └── layout/         # Layout components (Sidebar, ErrorBoundary)
 │   ├── hooks/              # Custom React hooks
+│   │   ├── useDebounce.js      # Shared debounce hook — single DEBOUNCE_MS constant
 │   │   ├── useServers.js
-│   │   ├── useMarketData.js    # 300ms debounced fetching
+│   │   ├── useMarketData.js    # Debounced filter fetching
+│   │   ├── useMarketBrowser.js # Global market browser state + fetching
+│   │   ├── useServerBrowser.js # Server mode state, transfer compatibility logic
 │   │   ├── useInventory.js     # Inventory data + import logic
 │   │   ├── useInventoryTable.js  # Client-side inventory table state + derived data
 │   │   ├── useExportOpportunities.js
@@ -419,6 +434,39 @@ Returns market statistics summary including:
 - Server coverage (items per server)
 - Last update timestamps per server
 
+#### GET /api/market/browse
+
+Paginated item list with optional server and category filters.
+
+**Query Parameters:**
+
+- `search` — Partial item name match
+- `category` — Filter by item category
+- `pvp_type` — Filter by server PvP type
+- `battleye` — Filter by BattlEye status
+- `exclude_blocked` — `true` to exclude servers with `notes = 'blocked'`
+- `sort_by` — Column to sort by (default: `top_activity`)
+- `sort_dir` — `asc` | `desc` (default: `desc`)
+- `limit` / `offset` — Pagination
+
+#### GET /api/market/categories
+
+Returns the list of distinct item categories present in the market data.
+
+#### GET /api/market/server-items
+
+Returns all items with active buy or sell offers on a specific server.
+
+**Query Parameters:**
+
+- `server_id` — Required. The server to look up.
+- `search` — Optional item name filter.
+- `category` — Optional category filter.
+- `sort_by` — `name` | `buy_offer` | `sell_offer` | `activity` | `global_avg_sell` (default: `activity`)
+- `sort_dir` — `asc` | `desc` (default: `desc`)
+
+**Response fields per item:** `item_id`, `name`, `category`, `best_npc_buy_price`, `best_npc_sell_price`, `buy_offer`, `sell_offer`, `buy_offers`, `sell_offers`, `global_avg_sell`
+
 #### GET /api/market/global-key-items
 
 Returns aggregated global market data for key items (Tibia Coins, Gold Token, Silver Token).
@@ -675,7 +723,10 @@ The frontend follows React best practices with a modular, component-based archit
 
 - `useServers()` - Fetches server data with loading/error states
 - `useServersContext()` - Consumes shared server data from `ServersContext` (no extra fetch)
-- `useMarketData()` - Fetches market data with 300ms debounce on filter changes
+- `useDebounce(value, delay?)` - Generic debounce hook; `DEBOUNCE_MS` export is the app-wide default delay
+- `useMarketBrowser()` - Global market browser: search, category, server filters, pagination, sort, item selection, per-item server data
+- `useServerBrowser()` - Server mode: server list, transfer compatibility filtering, item list with category/search, `myServer`, `onlyCompatible`, `excludeBlocked`
+- `useMarketData()` - Fetches market data with debounce on filter changes
 - `useInventory()` - Inventory data fetching, categories, and import logic
 - `useFilters(items)` - Manages filter state with memoized filtering logic
 - `useWeeklyDeliveryItems()` - Fetches weekly delivery items with local and global pricing

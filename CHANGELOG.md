@@ -5,6 +5,57 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-06-27
+
+### Added — Market Browser (`src/pages/MarketBrowser.jsx`)
+
+New page accessible from the sidebar (TrendingUp icon) with two modes switchable via a toggle.
+
+#### Global Mode
+
+- Browses all items across all servers with filtering, sorting, and pagination
+- Left panel: sortable paginated item list with search, category dropdown, PvP type buttons, BattlEye buttons, and "Exclude blocked" checkbox
+- Right panel: per-server price breakdown for the selected item, with stat cards reflecting active filters
+- **Backend** (`backend/routes/market.py`): new `GET /api/market/browse` endpoint; new `GET /api/market/categories` endpoint returning distinct item categories
+- **Hook** (`src/hooks/useMarketBrowser.js`): manages search debounce, pagination, sort state, item selection, per-item server data fetch, and `filteredStats` derived from active server filters
+- **Components**: `MarketItemList.jsx` (paginated sortable item list), `MarketItemDetail.jsx` (stat cards + per-server price table)
+
+#### Server Mode
+
+- Browse all items with active offers on a specific server
+- Left panel (server list): search, PvP type buttons, BattlEye buttons, "Exclude blocked" checkbox, "My server" picker, "Only compatible servers" toggle
+- Right panel (item list): item search, category dropdown, sortable table with Buy / Sell / Global Sell / Offers columns; Sell price highlights green when it is cheaper than the global average
+- **Transfer compatibility filter**: when a home server is selected, "Only compatible servers" hides servers incompatible for transfer in either direction — rules based on PvP type order and BattlEye (Yellow cannot transfer to Green)
+- **Backend**: new `GET /api/market/server-items` endpoint — returns items with active offers on a server, supports `search`, `category`, `sort_by`, `sort_dir`; includes `global_avg_sell` from `market_summary`
+- **Hook** (`src/hooks/useServerBrowser.js`): `PVP_ORDER`, `canTransfer`, and `isTransferCompatible` defined at module scope for stability; manages server list, compatibility filtering, item list fetch, category, `excludeBlocked`, `myServer`, `onlyCompatible`
+- **Components**: `MarketServerList.jsx`, `MarketServerDetail.jsx`
+- Order book panel is a placeholder for future `tibiamarket.top` integration — no external API calls made
+
+### Added — `useDebounce` Hook (`src/hooks/useDebounce.js`)
+
+- Shared hook replacing copy-pasted `setTimeout` debounce patterns in all four data hooks
+- Exports `DEBOUNCE_MS` as a single constant — change one number to adjust debounce timing app-wide
+- Removed inline `useRef` + `setTimeout` blocks from `useMarketBrowser`, `useServerBrowser`, `useMarketData`, and `useStashExportPlan`
+
+### Added — New API Endpoints
+
+| Endpoint | Description |
+| --- | --- |
+| `GET /api/market/browse` | Paginated item list with optional server filters and global averages |
+| `GET /api/market/categories` | Distinct item categories present in the market |
+| `GET /api/market/server-items` | All items with active offers on a specific server |
+
+### Fixed
+
+- `GET /api/market/categories` — excluded `NULL` categories from the response; items with no category no longer produce a blank dropdown entry
+- `GET /api/market/browse` — count query now runs before `ORDER BY` is appended, avoiding unnecessary sort work on the count pass
+- `MarketServerDetail` — "cheaper than global" green highlight now appears on the **Sell** column (the local price) instead of the Global Sell column
+- `useServerBrowser` — eliminated a double network request when switching servers while a search was active; the fetch now waits for the debounce to settle before firing
+
+### Changed — `GET /api/market/item-servers`
+
+- Now accepts `pvp_type`, `battleye`, `exclude_blocked`, and `region` query params instead of hardcoding Optional PvP
+
 ## [0.6.0] - 2026-06-26
 
 *Branch: `feature/bounty-calculator` — deployed to `https://tibia-bounty-calc.netlify.app` for beta testing.*

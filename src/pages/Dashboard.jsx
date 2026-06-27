@@ -6,24 +6,10 @@ import ErrorMessage from '../components/common/ErrorMessage'
 import MarketItemCard from '../components/dashboard/MarketItemCard'
 import QuickActionCard from '../components/dashboard/QuickActionCard'
 import { PVP_TYPES, BATTLEYE_TYPES } from '../constants/filters'
+import FilterButton from '../components/common/FilterButton'
 
 const PVP_OPTIONS = PVP_TYPES.filter((t) => t !== 'All')
 const BATTLEYE_OPTIONS = BATTLEYE_TYPES.filter((t) => t !== 'All')
-
-function FilterButton({ label, active, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-        active
-          ? 'bg-emerald-600 text-white border border-emerald-500'
-          : 'bg-gray-700 text-gray-300 border border-gray-600 hover:bg-gray-600'
-      }`}
-    >
-      {label}
-    </button>
-  )
-}
 
 function Dashboard({ onNavigate }) {
   const [pvpType, setPvpType] = useState('')

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { API_BASE_URL, API_ENDPOINTS } from '../constants/api'
+import { useDebounce } from './useDebounce'
 
 export const useMarketData = ({ pvpType = '', battleye = '', excludeBlocked = false } = {}) => {
   const [marketData, setMarketData] = useState(null)
@@ -7,15 +8,12 @@ export const useMarketData = ({ pvpType = '', battleye = '', excludeBlocked = fa
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState(null)
 
-  const [debouncedFilters, setDebouncedFilters] = useState({ pvpType, battleye, excludeBlocked })
+  const debouncedPvpType = useDebounce(pvpType)
+  const debouncedBattleye = useDebounce(battleye)
+  const debouncedExcludeBlocked = useDebounce(excludeBlocked)
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedFilters({ pvpType, battleye, excludeBlocked }), 300)
-    return () => clearTimeout(t)
-  }, [pvpType, battleye, excludeBlocked])
-
-  useEffect(() => {
-    const { pvpType: dPvp, battleye: dBe, excludeBlocked: dEx } = debouncedFilters
+    const dPvp = debouncedPvpType, dBe = debouncedBattleye, dEx = debouncedExcludeBlocked
     const controller = new AbortController()
 
     const fetchMarketData = async () => {
@@ -56,7 +54,7 @@ export const useMarketData = ({ pvpType = '', battleye = '', excludeBlocked = fa
 
     fetchMarketData()
     return () => controller.abort()
-  }, [debouncedFilters])
+  }, [debouncedPvpType, debouncedBattleye, debouncedExcludeBlocked])
 
   return { marketData, loading, refreshing, error }
 }

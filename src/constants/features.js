@@ -11,6 +11,7 @@ export const FEATURES = {
   // Features in development (disable for production)
   INVENTORY: true,  // Stash Inventory - still in development
   BOUNTY_CALCULATOR: true,
+  MARKET_BROWSER: true,
 }
 
 /**
