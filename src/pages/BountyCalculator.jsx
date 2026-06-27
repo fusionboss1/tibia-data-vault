@@ -2,15 +2,15 @@ import { useState, useMemo, useCallback } from 'react'
 import { Target, RefreshCw, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
 const EVENTS = [
-  { label: 'No event', multiplier: 1.0 },
+  { label: 'No event', multiplier: 1 },
   { label: 'Bewitched (×1.5)', multiplier: 1.5 },
   { label: 'Double XP (×2)', multiplier: 2.0 },
   { label: 'Bewitched + Double XP (×3)', multiplier: 3.0 },
 ]
 
 const STAMINA = [
-  { label: 'Green stamina (×1.5)', multiplier: 1.5 },
-  { label: 'Orange stamina (×1)', multiplier: 1.0 },
+  { label: 'Green stamina (×1.5)', multiplier: 1.5, boostBonus: 0.75 },
+  { label: 'Orange stamina (×1)', multiplier: 1.0, boostBonus: 0.50 },
 ]
 
 const TIERS = [
@@ -165,8 +165,8 @@ function TaskSlot({ index, multiplier, metaRaw, onResultChange, verdict }) {
               {result.delta >= 0 ? '+' : ''}{(result.delta / 1e6).toFixed(3)}M
             </span>
           </div>
-          <div>Eff XP/h (with task): <span className="text-white">{(result.effPerHour / 1e6).toFixed(2)}M/h</span></div>
-          <div>Meta XP/h: <span className="text-white">{(result.metaTotal / result.T / 1e6).toFixed(2)}M/h</span></div>
+          <div>Eff XP/h (with task): <span className="text-white">{(result.effPerHour / 1e6).toFixed(2)}kk/h</span></div>
+          <div>Meta XP/h: <span className="text-white">{(result.metaTotal / result.T / 1e6).toFixed(2)}kk/h</span></div>
         </div>
       )}
     </div>
@@ -176,7 +176,9 @@ function TaskSlot({ index, multiplier, metaRaw, onResultChange, verdict }) {
 function BountyCalculator() {
   const [eventIdx, setEventIdx] = useState(0)
   const [staminaIdx, setStaminaIdx] = useState(0)
-  const multiplier = EVENTS[eventIdx].multiplier * STAMINA[staminaIdx].multiplier
+  const [boost, setBoost] = useState(false)
+  const staminaMult = STAMINA[staminaIdx].multiplier + (boost ? STAMINA[staminaIdx].boostBonus : 0)
+  const multiplier = EVENTS[eventIdx].multiplier * staminaMult
   const [metaInput, setMetaInput] = useState('7.2')
   const metaRaw = (parseFloat(metaInput) || 7.2) * 1_000_000
   const [results, setResults] = useState([null, null, null])
@@ -218,7 +220,6 @@ function BountyCalculator() {
 
       <div className="mb-6 p-4 bg-gray-800 border border-gray-700 rounded-xl">
         <div className="flex items-center gap-3 flex-wrap mb-3">
-          <RefreshCw className="w-4 h-4 text-blue-400 shrink-0" />
           <span className="text-sm text-gray-300 font-medium">Event:</span>
           <div className="flex flex-wrap gap-2">
             {EVENTS.map((e, i) => (
@@ -237,7 +238,6 @@ function BountyCalculator() {
           </div>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="w-4 h-4 shrink-0" />
           <span className="text-sm text-gray-300 font-medium">Stamina:</span>
           <div className="flex flex-wrap gap-2">
             {STAMINA.map((s, i) => (
@@ -255,11 +255,36 @@ function BountyCalculator() {
             ))}
           </div>
         </div>
+        <div className="flex items-center gap-3 flex-wrap mt-2">
+          <span className="text-sm text-gray-300 font-medium">Boost XP:</span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setBoost(true)}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                boost
+                  ? 'bg-purple-700 text-white border border-purple-600'
+                  : 'bg-gray-700 text-gray-300 border border-gray-600 hover:bg-gray-600'
+              }`}
+            >
+              Active (+{STAMINA[staminaIdx].boostBonus})
+            </button>
+            <button
+              onClick={() => setBoost(false)}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                !boost
+                  ? 'bg-purple-700 text-white border border-purple-600'
+                  : 'bg-gray-700 text-gray-300 border border-gray-600 hover:bg-gray-600'
+              }`}
+            >
+              Inactive
+            </button>
+          </div>
+        </div>
 
         <div className="mt-4 flex items-center gap-3">
-          <span className="text-xs text-gray-400">Active multiplier:</span>
+          <span className="text-xs text-gray-400">Active XP multiplier:</span>
           <span className="px-4 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/50 text-amber-300 font-bold text-lg tracking-wide">
-            ×{multiplier % 1 === 0 ? multiplier.toFixed(1) : multiplier}
+            {(multiplier * 100).toFixed(0)}%
           </span>
         </div>
 
@@ -274,7 +299,7 @@ function BountyCalculator() {
             className="w-24 bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm text-white focus:outline-none focus:border-blue-500"
           />
           <span className="text-gray-500">M/h</span>
-          <span>→ effective: <span className="text-amber-400 font-bold">{(metaRaw * multiplier / 1e6).toFixed(2)}M XP/h</span></span>
+          <span>→ effective XP rate after multipliers: <span className="text-amber-400 font-bold">{(metaRaw * multiplier / 1e6).toFixed(2)}kk XP/h</span></span>
         </div>
       </div>
 
@@ -288,7 +313,7 @@ function BountyCalculator() {
         <div className="w-full xl:w-64 xl:shrink-0 bg-gray-800 border border-gray-700 rounded-xl p-5 text-sm text-gray-300">
           <p className="font-bold text-white mb-4 text-base">How to use</p>
           <ol className="space-y-3 text-xs text-gray-400 list-none">
-            <li className="flex gap-2"><span className="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center shrink-0">1</span><span>Pick the <span className="text-white font-medium">XP period</span> that matches today's event.</span></li>
+            <li className="flex gap-2"><span className="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center shrink-0">1</span><span>Select <span className="text-white font-medium">EVENT</span> and <span className="text-white font-medium">STAMINA</span> to get the right multiplier.</span></li>
             <li className="flex gap-2"><span className="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center shrink-0">2</span><span>Set your <span className="text-white font-medium">benchmark</span> — the raw XP/h of your best meta spot.</span></li>
             <li className="flex gap-2"><span className="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center shrink-0">3</span><span>Fill in all <span className="text-white font-medium">3 task options</span> from your current reroll: spot XP/h, kill rate, kills required, and tier.</span></li>
             <li className="flex gap-2"><span className="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center shrink-0">4</span><span>The tool picks the option with the <span className="text-white font-medium">highest effective XP/h</span> (spot rate + task bonus spread over session time).</span></li>
