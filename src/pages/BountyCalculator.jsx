@@ -1,11 +1,16 @@
 import { useState, useMemo, useCallback } from 'react'
 import { Target, RefreshCw, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
-const PERIODS = [
-  { label: 'Jun 25 – Jul 2  (×2.25)', multiplier: 2.25 },
-  { label: 'Jul 3–4  (×4.5 — peak)', multiplier: 4.5 },
-  { label: 'Jul 5  (×3.0)', multiplier: 3.0 },
-  { label: 'No event  (×1.5)', multiplier: 1.5 },
+const EVENTS = [
+  { label: 'No event', multiplier: 1.0 },
+  { label: 'Bewitched (×1.5)', multiplier: 1.5 },
+  { label: 'Double XP (×2)', multiplier: 2.0 },
+  { label: 'Bewitched + Double XP (×3)', multiplier: 3.0 },
+]
+
+const STAMINA = [
+  { label: 'Green stamina (×1.5)', multiplier: 1.5 },
+  { label: 'Orange stamina (×1)', multiplier: 1.0 },
 ]
 
 const TIERS = [
@@ -169,8 +174,9 @@ function TaskSlot({ index, multiplier, metaRaw, onResultChange, verdict }) {
 }
 
 function BountyCalculator() {
-  const [periodIdx, setPeriodIdx] = useState(0)
-  const multiplier = PERIODS[periodIdx].multiplier
+  const [eventIdx, setEventIdx] = useState(0)
+  const [staminaIdx, setStaminaIdx] = useState(0)
+  const multiplier = EVENTS[eventIdx].multiplier * STAMINA[staminaIdx].multiplier
   const [metaInput, setMetaInput] = useState('7.2')
   const metaRaw = (parseFloat(metaInput) || 7.2) * 1_000_000
   const [results, setResults] = useState([null, null, null])
@@ -211,21 +217,40 @@ function BountyCalculator() {
       </div>
 
       <div className="mb-6 p-4 bg-gray-800 border border-gray-700 rounded-xl">
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-3 flex-wrap mb-3">
           <RefreshCw className="w-4 h-4 text-blue-400 shrink-0" />
-          <span className="text-sm text-gray-300 font-medium">Active XP period:</span>
+          <span className="text-sm text-gray-300 font-medium">Event:</span>
           <div className="flex flex-wrap gap-2">
-            {PERIODS.map((p, i) => (
+            {EVENTS.map((e, i) => (
               <button
                 key={i}
-                onClick={() => setPeriodIdx(i)}
+                onClick={() => setEventIdx(i)}
                 className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                  periodIdx === i
+                  eventIdx === i
                     ? 'bg-blue-600 text-white border border-blue-500'
                     : 'bg-gray-700 text-gray-300 border border-gray-600 hover:bg-gray-600'
                 }`}
               >
-                {p.label}
+                {e.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="w-4 h-4 shrink-0" />
+          <span className="text-sm text-gray-300 font-medium">Stamina:</span>
+          <div className="flex flex-wrap gap-2">
+            {STAMINA.map((s, i) => (
+              <button
+                key={i}
+                onClick={() => setStaminaIdx(i)}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  staminaIdx === i
+                    ? 'bg-emerald-700 text-white border border-emerald-600'
+                    : 'bg-gray-700 text-gray-300 border border-gray-600 hover:bg-gray-600'
+                }`}
+              >
+                {s.label}
               </button>
             ))}
           </div>
