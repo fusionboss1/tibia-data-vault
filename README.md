@@ -4,9 +4,21 @@ A web application for browsing and managing Tibia game server data.
 
 ## Version
 
-Current version: **0.5.0** — `feature/rework` merged into `master`. See [CHANGELOG.md](CHANGELOG.md) for the full list of changes in this release.
+Current version: **0.6.0** — Bounty Calculator beta deployed to `https://tibia-bounty-calc.netlify.app` on `feature/bounty-calculator`. See [CHANGELOG.md](CHANGELOG.md) for the full list of changes.
 
 ## Features
+
+- **Bounty Calculator** *(beta — live at [tibia-bounty-calc.netlify.app](https://tibia-bounty-calc.netlify.app))*: Real-time decision tool for Bounty Tasks — no backend required, runs entirely in the browser
+  - Fill any of the 3 task option cards; each reacts instantly without needing the others filled
+  - Inputs per card: creature name (optional), spot XP/h (kk), kill rate (kills/h), kills required, tier
+  - Compares effective XP/h — `(spotXP × T + taskReward) / T` — so sessions of different lengths are always compared fairly
+  - **TAKE IT** on the single best option if it beats the benchmark; **SKIP** on all filled cards if none do
+  - Separate event (No event / Bewitched / Double XP / Bewitched+Double XP) and stamina (Green / Orange) selectors
+  - Boost XP toggle — adds a flat +0.75 or +0.50 after `event × stamina` (not multiplied by event)
+  - Active multiplier shown as a highlighted % badge, updates live as you change any selector
+  - Editable benchmark XP/h (defaults to 7.2kk — Roshamuul West)
+  - Simplified result per card: effective XP/h with task, task duration, net vs benchmark
+  - Mobile-friendly: sidebar collapses to a top icon bar, cards stack in a single column
 
 - **Stash Inventory Manager**: Track your in-game stash with rich pricing signals
   - Import items from server log text (paste Retrieved log lines)
@@ -99,7 +111,8 @@ tibia-data-vault/
 │   │   ├── Dashboard.jsx
 │   │   ├── Servers.jsx
 │   │   ├── Inventory.jsx
-│   │   └── WeeklyDelivery.jsx
+│   │   ├── WeeklyDelivery.jsx
+│   │   └── BountyCalculator.jsx  # Standalone, no backend dependency
 │   ├── components/         # Reusable UI components
 │   │   ├── common/         # Generic components (LoadingSpinner, ErrorMessage, etc.)
 │   │   ├── dashboard/      # Dashboard-specific components

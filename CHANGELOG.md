@@ -5,6 +5,60 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-06-26
+
+*Branch: `feature/bounty-calculator` — deployed to `https://tibia-bounty-calc.netlify.app` for beta testing.*
+
+### Added — Bounty Calculator (`src/pages/BountyCalculator.jsx`)
+
+New standalone page — no backend required, runs entirely in the browser.
+
+#### Core logic
+
+- 3-card layout, one card per task option the game offers on a reroll
+- Inputs per card: creature name (optional), spot XP/h in kk, kill rate (kills/hour), kills required (300–600), tier (Bronze / Silver / Gold)
+- Verdict formula: `effPerHour = (spotXP × T + taskReward) / T` — spreads the task bonus over the session time for a fair comparison regardless of session length
+- Cards react instantly as soon as filled — no need to fill all 3
+- Among filled cards, the one with the highest `effPerHour` is chosen as the best candidate
+- **TAKE IT** shown on the best card only if it beats the benchmark effective XP/h
+- **SKIP** shown on all filled cards if none of them beat the benchmark
+- Simplified result section per card: effective XP/h with task, task duration (minutes), net XP vs benchmark (+/- in kk)
+
+#### Multiplier settings
+
+- Event selector: No event (×1), Bewitched (×1.5), Double XP (×2), Bewitched + Double XP (×3)
+- Stamina selector: Green (×1.5), Orange (×1)
+- Boost XP toggle: adds a flat +0.75 (green) or +0.50 (orange) after `event × stamina` — not multiplied by the event
+- Final formula: `multiplier = event × stamina + boostBonus`
+- Prominent amber badge shows the active combined multiplier as a percentage (e.g. 375%)
+- Editable benchmark XP/h (defaults to 7.2kk — Roshamuul West); shows effective benchmark rate after multipliers
+
+#### UX & layout
+
+- Inline field guidance: every label has a short hint, placeholders explain what to enter, tier buttons show their XP reward range directly below them
+- Short friendly hint above the cards explains TAKE IT / SKIP in plain language — no separate instructions card
+- Mobile: sidebar collapses to a fixed top icon bar; cards stack in a single column; content gets top padding to clear the bar
+- Desktop (≥768px): 3-column card grid; sidebar remains on the left; all settings visible without scrolling
+
+### Added — Netlify Deployment (`netlify.toml`)
+
+- New `netlify.toml` at project root: build command `pnpm run build`, publish dir `dist`, SPA redirect rule (`/* → /index.html`)
+- Live URL: `https://tibia-bounty-calc.netlify.app` — auto-deploys on push to `feature/bounty-calculator`
+- `VITE_API_URL=http://0.0.0.0` set in Netlify environment to disable the localhost fallback in `src/constants/api.js` and prevent Android local network permission prompts
+
+### Changed — Beta Branch Isolation (`src/App.jsx`, `src/constants/features.js`)
+
+- All features except `BOUNTY_CALCULATOR` disabled (`DASHBOARD`, `SERVERS`, `WEEKLY_DELIVERY`, `INVENTORY` all `false`)
+- All disabled page imports removed from `App.jsx` — bundle contains only Bounty Calculator code; eliminates all backend API calls
+- Default page set to `bounty`
+
+### Fixed — Verdict Logic
+
+- **Multiple TAKE IT verdicts**: lifted result state to parent; parent selects single best, passes verdict down per slot
+- **Unfair comparison across different session lengths**: switched from `spotTotal` (raw XP accumulated) to `effPerHour` (XP per hour including task bonus)
+- **All-skip never triggered**: fixed condition from `delta >= 0` to `effPerHour > metaEffPerHour`
+- **Boost XP applied as multiplier instead of flat addition**: corrected formula from `(stamina + boost) × event` to `stamina × event + boost`
+
 ## [0.5.0] - 2026-06-23
 
 *Branches merged: `feature/rework` → `master`. All changes below were developed on `feature/rework` and are now part of the main release.*
