@@ -8,12 +8,17 @@ Current version: **0.6.0** — Bounty Calculator beta deployed to `https://tibia
 
 ## Features
 
-- **Bounty Calculator** *(beta — live at [tibia-bounty-calc.netlify.app](https://tibia-bounty-calc.netlify.app))*: Real-time decision tool for Bounty Tasks
-  - Fill in the 3 task options the game offers (spot XP/h, kill rate, kills required, tier)
-  - Compares each option's effective XP/h (spot rate + task bonus spread over session time) against a configurable benchmark spot
-  - Shows **TAKE IT** on the single best option, **SKIP** on all 3 if none beat the benchmark
-  - XP period selector for event multipliers; editable benchmark XP/h
-  - No backend required — runs entirely in the browser
+- **Bounty Calculator** *(beta — live at [tibia-bounty-calc.netlify.app](https://tibia-bounty-calc.netlify.app))*: Real-time decision tool for Bounty Tasks — no backend required, runs entirely in the browser
+  - Fill any of the 3 task option cards; each reacts instantly without needing the others filled
+  - Inputs per card: creature name (optional), spot XP/h (kk), kill rate (kills/h), kills required, tier
+  - Compares effective XP/h — `(spotXP × T + taskReward) / T` — so sessions of different lengths are always compared fairly
+  - **TAKE IT** on the single best option if it beats the benchmark; **SKIP** on all filled cards if none do
+  - Separate event (No event / Bewitched / Double XP / Bewitched+Double XP) and stamina (Green / Orange) selectors
+  - Boost XP toggle — adds a flat +0.75 or +0.50 after `event × stamina` (not multiplied by event)
+  - Active multiplier shown as a highlighted % badge, updates live as you change any selector
+  - Editable benchmark XP/h (defaults to 7.2kk — Roshamuul West)
+  - Simplified result per card: effective XP/h with task, task duration, net vs benchmark
+  - Mobile-friendly: sidebar collapses to a top icon bar, cards stack in a single column
 
 - **Stash Inventory Manager**: Track your in-game stash with rich pricing signals
   - Import items from server log text (paste Retrieved log lines)
