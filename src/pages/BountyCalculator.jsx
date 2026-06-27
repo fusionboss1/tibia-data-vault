@@ -95,7 +95,7 @@ function TaskSlot({ index, multiplier, metaRaw, onResultChange, verdict }) {
         </div>
 
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Spot raw XP/h (millions)</label>
+          <label className="block text-xs text-gray-400 mb-1">Spot raw XP (in kk/h)</label>
           <input
             type="number"
             value={rawXph}
@@ -155,18 +155,21 @@ function TaskSlot({ index, multiplier, metaRaw, onResultChange, verdict }) {
       </div>
 
       {result && (
-        <div className="mt-3 pt-3 border-t border-gray-700 grid grid-cols-2 gap-2 text-xs text-gray-400">
-          <div>Task time: <span className="text-white">{(result.T * 60).toFixed(0)} min</span></div>
-          <div>Task XP reward: <span className="text-white">{(result.reward / 1e6).toFixed(3)}M</span></div>
-          <div>Gap to cover: <span className="text-white">{(result.gapTotal / 1e6).toFixed(3)}M</span></div>
-          <div>
-            Net vs meta:{' '}
-            <span className={result.delta >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-              {result.delta >= 0 ? '+' : ''}{(result.delta / 1e6).toFixed(3)}M
+        <div className="mt-3 pt-3 border-t border-gray-700 space-y-2 text-xs">
+          <div className="flex justify-between">
+            <span className="text-gray-400">Eff. XP/h with task</span>
+            <span className="text-white font-medium">{(result.effPerHour / 1e6).toFixed(2)} kk/h</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-400">Task duration</span>
+            <span className="text-white font-medium">{(result.T * 60).toFixed(0)} min</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-400">Net vs benchmark</span>
+            <span className={`font-medium ${result.delta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {result.delta >= 0 ? '+' : ''}{(result.delta / 1e6).toFixed(2)} kk
             </span>
           </div>
-          <div>Eff XP/h (with task): <span className="text-white">{(result.effPerHour / 1e6).toFixed(2)}kk/h</span></div>
-          <div>Meta XP/h: <span className="text-white">{(result.metaTotal / result.T / 1e6).toFixed(2)}kk/h</span></div>
         </div>
       )}
     </div>
@@ -191,19 +194,20 @@ function BountyCalculator() {
   }, [])
 
   const verdicts = useMemo(() => {
-    const allReady = results.every(r => r !== null)
-    if (!allReady) return [null, null, null]
+    const filled = results.map((r, i) => r ? i : -1).filter(i => i >= 0)
+    if (filled.length === 0) return [null, null, null]
 
     const metaEffPerHour = metaRaw * multiplier
-    const bestIdx = results.reduce((best, r, i) =>
-      r.effPerHour > results[best].effPerHour ? i : best, 0)
+    const bestIdx = filled.reduce((best, i) =>
+      results[i].effPerHour > results[best].effPerHour ? i : best, filled[0])
     const bestBeatsMeta = results[bestIdx].effPerHour > metaEffPerHour
 
-    return results.map((_, i) => {
+    return results.map((r, i) => {
+      if (!r) return null
       if (!bestBeatsMeta) return 'skip'
       return i === bestIdx ? 'take' : 'skip'
     })
-  }, [results])
+  }, [results, metaRaw, multiplier])
 
   return (
     <div className="p-4 md:p-8 max-w-7xl">
@@ -213,7 +217,7 @@ function BountyCalculator() {
           Bounty Calculator
         </h1>
         <p className="text-sm text-gray-400">
-          Fill all 3 options, then the best one will be highlighted. Only one can be taken.
+          Fill any card to get an instant verdict. Fill multiple to compare — the best one wins.
         </p>
       </div>
 
@@ -297,7 +301,7 @@ function BountyCalculator() {
             min="0"
             className="w-24 bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm text-white focus:outline-none focus:border-blue-500"
           />
-          <span className="text-gray-500">M/h</span>
+          <span className="text-gray-500">kk/h</span>
           <span>→ effective XP rate after multipliers: <span className="text-amber-400 font-bold">{(metaRaw * multiplier / 1e6).toFixed(2)}kk XP/h</span></span>
         </div>
       </div>
