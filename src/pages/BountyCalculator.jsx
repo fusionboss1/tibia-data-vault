@@ -84,7 +84,7 @@ function TaskSlot({ index, multiplier, metaRaw, onResultChange, verdict }) {
 
       <div className="grid grid-cols-2 gap-3 mb-3">
         <div className="col-span-2">
-          <label className="block text-xs text-gray-400 mb-1">Creature name</label>
+          <label className="block text-xs text-gray-400 mb-1">Creature name <span className="text-gray-500">(optional, for your reference)</span></label>
           <input
             type="text"
             value={creature}
@@ -95,12 +95,12 @@ function TaskSlot({ index, multiplier, metaRaw, onResultChange, verdict }) {
         </div>
 
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Spot raw XP (in kk/h)</label>
+          <label className="block text-xs text-gray-400 mb-1">Spot XP/h <span className="text-gray-500">(kk = millions)</span></label>
           <input
             type="number"
             value={rawXph}
             onChange={e => setRawXph(e.target.value)}
-            placeholder="e.g. 7.2"
+            placeholder="e.g. 7.2 for 7.2kk"
             step="0.1"
             min="0"
             className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
@@ -108,19 +108,19 @@ function TaskSlot({ index, multiplier, metaRaw, onResultChange, verdict }) {
         </div>
 
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Kill rate (per hour)</label>
+          <label className="block text-xs text-gray-400 mb-1">Kill rate <span className="text-gray-500">(kills/hour)</span></label>
           <input
             type="number"
             value={killsPerH}
             onChange={e => setKillsPerH(e.target.value)}
-            placeholder="e.g. 600"
+            placeholder="how many kills/h at this spot"
             min="1"
             className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
           />
         </div>
 
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Kills required</label>
+          <label className="block text-xs text-gray-400 mb-1">Kills required <span className="text-gray-500">(from the task)</span></label>
           <input
             type="number"
             value={kills}
@@ -132,8 +132,8 @@ function TaskSlot({ index, multiplier, metaRaw, onResultChange, verdict }) {
           />
         </div>
 
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">Tier</label>
+        <div className="col-span-2">
+          <label className="block text-xs text-gray-400 mb-1">Tier <span className="text-gray-500">(color shown in-game)</span></label>
           <div className="flex gap-1">
             {TIERS.map(t => (
               <button
@@ -150,6 +150,11 @@ function TaskSlot({ index, multiplier, metaRaw, onResultChange, verdict }) {
                 {t.label}
               </button>
             ))}
+          </div>
+          <div className="flex justify-between mt-1 text-xs text-gray-500 px-0.5">
+            <span>0.56 – 1.13 kk XP</span>
+            <span>1.13 – 2.25 kk XP</span>
+            <span>2.25 – 4.50 kk XP</span>
           </div>
         </div>
       </div>
@@ -306,31 +311,15 @@ function BountyCalculator() {
         </div>
       </div>
 
-      <div className="flex flex-col xl:flex-row gap-4 items-start">
-        <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[0, 1, 2].map(i => (
-            <TaskSlot key={i} index={i} multiplier={multiplier} metaRaw={metaRaw} onResultChange={handleResultChange} verdict={verdicts[i]} />
-          ))}
-        </div>
+      <p className="mb-3 text-sm text-gray-400">
+        Fill in the task options the game is offering you below.
+        Each card tells you instantly if that option is worth taking — <span className="text-emerald-400 font-medium">TAKE IT</span> means it beats your benchmark, <span className="text-red-400 font-medium">SKIP</span> means go back to meta or reroll.
+      </p>
 
-        <div className="w-full xl:w-64 xl:shrink-0 bg-gray-800 border border-gray-700 rounded-xl p-5 text-sm text-gray-300">
-          <p className="font-bold text-white mb-4 text-base">How to use</p>
-          <ol className="space-y-3 text-xs text-gray-400 list-none">
-            <li className="flex gap-2"><span className="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center shrink-0">1</span><span>Select <span className="text-white font-medium">EVENT</span> and <span className="text-white font-medium">STAMINA</span> to get the right multiplier.</span></li>
-            <li className="flex gap-2"><span className="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center shrink-0">2</span><span>Set your <span className="text-white font-medium">benchmark</span> — the raw XP/h of your best meta spot.</span></li>
-            <li className="flex gap-2"><span className="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center shrink-0">3</span><span>Fill one or more cards with <span className="text-white font-medium">task options from your current reroll</span>: spot XP/h, kill rate, kills required, and tier.</span></li>
-            <li className="flex gap-2"><span className="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center shrink-0">4</span><span>As soon as you fill one or more cards, the tool will immediately compare them to your benchmark spot and tell you if it's worth or not.</span></li>
-            <li className="flex gap-2"><span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center shrink-0">✓</span><span><span className="text-emerald-400 font-medium">TAKE IT</span> = that option beats your benchmark. <span className="text-red-400 font-medium">SKIP</span> = go back to meta / reroll.</span></li>
-          </ol>
-          <div className="mt-4 pt-4 border-t border-gray-700 text-xs text-gray-500">
-            <p className="mb-1 text-gray-400 font-medium">Tier XP rewards</p>
-            <div className="space-y-1">
-              <div className="flex justify-between"><span className="text-amber-700 font-medium">Bronze ×1</span><span>0.56M – 1.13M</span></div>
-              <div className="flex justify-between"><span className="text-slate-400 font-medium">Silver ×2</span><span>1.13M – 2.25M</span></div>
-              <div className="flex justify-between"><span className="text-yellow-400 font-medium">Gold ×4</span><span>2.25M – 4.50M</span></div>
-            </div>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {[0, 1, 2].map(i => (
+          <TaskSlot key={i} index={i} multiplier={multiplier} metaRaw={metaRaw} onResultChange={handleResultChange} verdict={verdicts[i]} />
+        ))}
       </div>
     </div>
   )
