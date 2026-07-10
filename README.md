@@ -11,7 +11,7 @@ Current version: **0.7.0** — Market Browser with Global and Server modes. See 
 - **Market Browser**: Browse Tibia market data in two modes
   - **Global mode**: search and filter all items across all servers; click an item to see per-server prices with stat cards that reflect active filters (PvP type, BattlEye, exclude blocked)
   - **Server mode**: pick a server to see all items with active offers; compare local sell price against the global average (highlighted green when cheaper); filter the server list by PvP type, BattlEye, exclude blocked, or use the "My server" + "Only compatible servers" toggle to hide servers you can never transfer to or from
-  - Transfer compatibility rules: destination must be same or less permissive PvP type; Yellow BattlEye cannot transfer to Green
+  - Transfer compatibility rules: destination must be same or less permissive PvP type; Yellow BattlEye cannot transfer to Green — see [docs/world-transfers.md](docs/world-transfers.md) for full details
   - Item list supports search and category filtering; order book panel is a placeholder for future live data
 
 - **Bounty Calculator** *(beta — live at [tibia-bounty-calc.netlify.app](https://tibia-bounty-calc.netlify.app))*: Real-time decision tool for Bounty Tasks — no backend required, runs entirely in the browser
@@ -227,7 +227,7 @@ This will:
 
 ### Fetching Market Data
 
-Use `scripts/fetch_market.py` to pull market data from the [tibiamarket.top API](https://api.tibiamarket.top) into the local database.
+Use `scripts/fetch_market.py` to pull market data from the [tibiamarket.top API](https://api.tibiamarket.top) into the local database. See [docs/tibiamarket-api.md](docs/tibiamarket-api.md) for the full API reference, or the [Swagger docs](https://api.tibiamarket.top/docs#/).
 
 ```bash
 # Fetch specific servers
