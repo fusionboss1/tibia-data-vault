@@ -4,7 +4,7 @@ import { useDebounce } from './useDebounce'
 
 const PAGE_SIZE = 100
 
-export const useMarketBrowser = () => {
+export const useMarketBrowser = (mode = 'global') => {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
   const [pvpType, setPvpType] = useState('')
@@ -34,6 +34,7 @@ export const useMarketBrowser = () => {
 
   useEffect(() => {
     const controller = new AbortController()
+    let isActive = true
 
     const fetchItems = async () => {
       setLoading(true)
@@ -45,6 +46,7 @@ export const useMarketBrowser = () => {
         if (pvpType) params.set('pvp_type', pvpType)
         if (battleye) params.set('battleye', battleye)
         if (excludeBlocked) params.set('exclude_blocked', 'true')
+        params.set('mode', mode)
         params.set('sort_by', sortBy)
         params.set('sort_dir', sortDir)
         params.set('limit', PAGE_SIZE)
@@ -55,6 +57,7 @@ export const useMarketBrowser = () => {
         })
         if (!res.ok) throw new Error('Failed to fetch market items')
         const result = await res.json()
+        if (!isActive) return
         if (result.success) {
           setItems(result.data.items)
           setTotal(result.data.total)
@@ -62,16 +65,19 @@ export const useMarketBrowser = () => {
           throw new Error('Failed to load market items')
         }
       } catch (err) {
-        if (err.name === 'AbortError') return
+        if (!isActive || err.name === 'AbortError') return
         setError(err.message)
       } finally {
-        setLoading(false)
+        if (isActive) setLoading(false)
       }
     }
 
     fetchItems()
-    return () => controller.abort()
-  }, [debouncedSearch, category, pvpType, battleye, excludeBlocked, sortBy, sortDir, offset])
+    return () => {
+      isActive = false
+      controller.abort()
+    }
+  }, [debouncedSearch, category, pvpType, battleye, excludeBlocked, sortBy, sortDir, offset, mode])
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -95,6 +101,8 @@ export const useMarketBrowser = () => {
   useEffect(() => {
     if (!selectedItem) return
     const controller = new AbortController()
+    let isActive = true
+    setServerData([])
 
     const fetchServers = async () => {
       setServerLoading(true)
@@ -109,18 +117,22 @@ export const useMarketBrowser = () => {
         })
         if (!res.ok) throw new Error('Failed to fetch server data')
         const result = await res.json()
+        if (!isActive) return
         if (result.success) setServerData(result.data.servers)
         else throw new Error('Failed to load server data')
       } catch (err) {
-        if (err.name === 'AbortError') return
+        if (!isActive || err.name === 'AbortError') return
         setServerError(err.message)
       } finally {
-        setServerLoading(false)
+        if (isActive) setServerLoading(false)
       }
     }
 
     fetchServers()
-    return () => controller.abort()
+    return () => {
+      isActive = false
+      controller.abort()
+    }
   }, [selectedItem, pvpType, battleye, excludeBlocked])
 
   const filteredStats = serverData.length > 0 ? (() => {

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Search, X, Filter, Globe, Server } from 'lucide-react'
+import { Search, X, Filter, Globe, Server, ClipboardList } from 'lucide-react'
 import { useMarketBrowser } from '../hooks/useMarketBrowser'
 import { useServerBrowser } from '../hooks/useServerBrowser'
 import FilterButton from '../components/common/FilterButton'
@@ -14,7 +14,7 @@ import { PVP_TYPES, BATTLEYE_TYPES } from '../constants/filters'
 const PVP_OPTIONS = PVP_TYPES.filter((t) => t !== 'All')
 const BATTLEYE_OPTIONS = BATTLEYE_TYPES.filter((t) => t !== 'All')
 
-function GlobalView() {
+function GlobalView({ mode = 'global' }) {
   const {
     search, setSearch,
     category, setCategory,
@@ -29,7 +29,7 @@ function GlobalView() {
     serverData, serverLoading, serverError,
     filteredStats,
     PAGE_SIZE, totalPages, currentPage,
-  } = useMarketBrowser()
+  } = useMarketBrowser(mode)
 
   const hasActiveFilters = search || category || pvpType || battleye || excludeBlocked
 
@@ -105,6 +105,7 @@ function GlobalView() {
             items={items} total={total} loading={loading} selectedItem={selectedItem} onSelect={selectItem}
             sortBy={sortBy} sortDir={sortDir} onSort={handleSort}
             currentPage={currentPage} totalPages={totalPages} onPageChange={(p) => setOffset(p * PAGE_SIZE)}
+            showNpcSellPrice={mode === 'weekly_delivery'}
           />
         </div>
         <div className="flex-1 overflow-hidden bg-gray-800/30">
@@ -179,6 +180,12 @@ function MarketBrowser() {
               <Globe className="w-3.5 h-3.5" /> Global
             </button>
             <button
+              onClick={() => setMode('weekly_delivery')}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors ${mode === 'weekly_delivery' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
+            >
+              <ClipboardList className="w-3.5 h-3.5" /> Weekly Delivery
+            </button>
+            <button
               onClick={() => setMode('server')}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors ${mode === 'server' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
             >
@@ -188,7 +195,7 @@ function MarketBrowser() {
         </div>
       </div>
 
-      {mode === 'global' ? <GlobalView /> : <ServerView />}
+      {mode === 'global' ? <GlobalView /> : mode === 'weekly_delivery' ? <GlobalView mode="weekly_delivery" /> : <ServerView />}
     </div>
   )
 }

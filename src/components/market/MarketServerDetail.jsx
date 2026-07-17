@@ -38,7 +38,9 @@ function MarketServerDetail({ server, items, loading, error, itemSearch, setItem
   const cols = [
     { key: 'name', label: 'Item' },
     { key: 'buy_offer', label: 'Buy' },
+    { key: 'tc_buy_offer', label: 'Buy TC' },
     { key: 'sell_offer', label: 'Sell' },
+    { key: 'tc_sell_offer', label: 'Sell TC' },
     { key: 'global_avg_sell', label: 'Global Sell' },
     { key: 'activity', label: 'Offers' },
   ]
@@ -88,7 +90,7 @@ function MarketServerDetail({ server, items, loading, error, itemSearch, setItem
           <p className="px-4 py-8 text-sm text-gray-500 text-center">No active offers on this server</p>
         )}
 
-        {items.length > 0 && (
+        {!loading && !error && items.length > 0 && (
           <table className="w-full text-xs">
             <thead className="sticky top-0 bg-gray-800 z-10">
               <tr>
@@ -119,11 +121,13 @@ function MarketServerDetail({ server, items, loading, error, itemSearch, setItem
                   >
                     <td className="px-3 py-2 text-white font-medium capitalize max-w-[160px] truncate">{item.name}</td>
                     <td className="px-3 py-2 text-emerald-400 text-right whitespace-nowrap">{fmt(item.buy_offer)}</td>
+                    <td className="px-3 py-2 text-cyan-400 text-right whitespace-nowrap">{fmt(item.tc_buy_offer)}</td>
                     <td className={`px-3 py-2 text-right whitespace-nowrap ${
                       item.global_avg_sell > 0 && item.sell_offer > 0 && item.sell_offer < item.global_avg_sell
                         ? 'text-emerald-400 font-medium'
                         : 'text-amber-400'
                     }`}>{fmt(item.sell_offer)}</td>
+                    <td className="px-3 py-2 text-violet-400 text-right whitespace-nowrap">{fmt(item.tc_sell_offer)}</td>
                     <td className="px-3 py-2 text-gray-500 text-right whitespace-nowrap">{fmt(item.global_avg_sell)}</td>
                     <td className="px-3 py-2 text-gray-400 text-right">{item.buy_offers}↑ {item.sell_offers}↓</td>
                   </tr>

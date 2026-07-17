@@ -78,6 +78,8 @@ export const useServerBrowser = () => {
     if (!selectedServer) return
     if (itemSearch !== debouncedItemSearch) return
     const controller = new AbortController()
+    let isActive = true
+    setItems([])
 
     const fetchItems = async () => {
       setItemsLoading(true)
@@ -93,18 +95,22 @@ export const useServerBrowser = () => {
         })
         if (!res.ok) throw new Error('Failed to fetch server items')
         const result = await res.json()
+        if (!isActive) return
         if (result.success) setItems(result.data.items)
         else throw new Error('Failed to load server items')
       } catch (err) {
-        if (err.name === 'AbortError') return
+        if (!isActive || err.name === 'AbortError') return
         setItemsError(err.message)
       } finally {
-        setItemsLoading(false)
+        if (isActive) setItemsLoading(false)
       }
     }
 
     fetchItems()
-    return () => controller.abort()
+    return () => {
+      isActive = false
+      controller.abort()
+    }
   }, [selectedServer, itemSearch, debouncedItemSearch, category, sortBy, sortDir])
 
   const selectServer = useCallback((server) => {

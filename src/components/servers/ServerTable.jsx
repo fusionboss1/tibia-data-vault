@@ -3,6 +3,13 @@ import PropTypes from 'prop-types'
 import { formatTimestamp, formatISODate } from '../../utils/formatters'
 
 const COLUMNS = ['Name', 'Region', 'PvP Type', 'BattlEye', 'Notes', 'Release Date', 'Last Market Fetch', 'API Last Update']
+const TIMESTAMP_MATCH_TOLERANCE_MS = 15 * 60 * 1000
+
+const toTimestampMilliseconds = (value, isUnixTimestamp = false) => {
+  if (value == null || value === '') return null
+  const timestamp = isUnixTimestamp ? Number(value) * 1000 : Date.parse(value)
+  return Number.isNaN(timestamp) ? null : timestamp
+}
 
 const ServerTable = memo(function ServerTable({ servers }) {
   return (
@@ -36,7 +43,14 @@ const ServerTable = memo(function ServerTable({ servers }) {
                 </td>
               </tr>
             ) : (
-              servers.map((server) => (
+              servers.map((server) => {
+                const marketFetchTime = toTimestampMilliseconds(server.market_last_fetch, true)
+                const apiUpdateTime = toTimestampMilliseconds(server.api_last_update)
+                const timestampsMatch = marketFetchTime !== null &&
+                  apiUpdateTime !== null &&
+                  Math.abs(marketFetchTime - apiUpdateTime) <= TIMESTAMP_MATCH_TOLERANCE_MS
+
+                return (
                 <tr key={server.id} className="hover:bg-gray-750 transition-[background-color]">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-white">{server.name || '-'}</div>
@@ -66,14 +80,15 @@ const ServerTable = memo(function ServerTable({ servers }) {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-400">{server.release_date || '-'}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className={`px-6 py-4 whitespace-nowrap ${timestampsMatch ? 'bg-green-900/40' : ''}`}>
                     <div className="text-sm text-gray-400">{formatTimestamp(server.market_last_fetch)}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className={`px-6 py-4 whitespace-nowrap ${timestampsMatch ? 'bg-green-900/40' : ''}`}>
                     <div className="text-sm text-gray-400">{formatISODate(server.api_last_update)}</div>
                   </td>
                 </tr>
-              ))
+                )
+              })
             )}
           </tbody>
         </table>

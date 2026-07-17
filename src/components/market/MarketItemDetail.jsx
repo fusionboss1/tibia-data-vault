@@ -97,13 +97,15 @@ function MarketItemDetail({ item, serverData, loading, error, filteredStats }) {
           <p className="px-4 py-6 text-sm text-gray-500 text-center">No active offers match the current filters</p>
         )}
 
-        {serverData.length > 0 && (
+        {!loading && !error && serverData.length > 0 && (
           <table className="w-full text-xs">
             <thead className="sticky top-8 bg-gray-800 z-10">
               <tr className="text-gray-400 font-medium">
                 <th className="px-4 py-2 text-left">Server</th>
                 <th className="px-4 py-2 text-right">Buy</th>
+                <th className="px-4 py-2 text-right">Buy TC</th>
                 <th className="px-4 py-2 text-right">Sell</th>
+                <th className="px-4 py-2 text-right">Sell TC</th>
                 <th className="px-4 py-2 text-right">Offers</th>
               </tr>
             </thead>
@@ -115,7 +117,9 @@ function MarketItemDetail({ item, serverData, loading, error, filteredStats }) {
                     <BattleyeBadge status={s.battleye} />
                   </td>
                   <td className="px-4 py-2 text-emerald-400 text-right">{fmt(s.buy_offer)}</td>
+                  <td className="px-4 py-2 text-cyan-400 text-right">{fmt(s.tc_buy_offer)}</td>
                   <td className="px-4 py-2 text-amber-400 text-right">{fmt(s.sell_offer)}</td>
+                  <td className="px-4 py-2 text-violet-400 text-right">{fmt(s.tc_sell_offer)}</td>
                   <td className="px-4 py-2 text-gray-400 text-right">
                     {s.buy_offers}↑ {s.sell_offers}↓
                   </td>

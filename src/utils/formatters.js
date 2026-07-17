@@ -5,30 +5,32 @@ export const formatNumber = (num) => {
   return NUMBER_FMT.format(num)
 }
 
+const formatRelativeTime = (date) => {
+  const diffInSeconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000))
+  const units = [
+    ['day', 86400],
+    ['hour', 3600],
+    ['minute', 60]
+  ]
+
+  for (const [unit, seconds] of units) {
+    if (diffInSeconds >= seconds) {
+      const value = Math.floor(diffInSeconds / seconds)
+      return `${value} ${unit}${value === 1 ? '' : 's'} ago`
+    }
+  }
+
+  return 'just now'
+}
+
 export const formatTimestamp = (timestamp) => {
   if (!timestamp) return '-'
-  const date = new Date(timestamp * 1000)
-  const formatted = date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-  return `${formatted} CEST`
+  return formatRelativeTime(new Date(timestamp * 1000))
 }
 
 export const formatISODate = (isoString) => {
   if (!isoString) return '-'
-  const date = new Date(isoString)
-  const formatted = date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-  return `${formatted} CEST`
+  return formatRelativeTime(new Date(isoString))
 }
 
 export const formatPrice = (price) => {
