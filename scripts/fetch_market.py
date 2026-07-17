@@ -32,7 +32,6 @@ from backend import (
     ITEM_METADATA_PATH,
     TIBIA_MARKET_API_URL,
     REQUEST_TIMEOUT,
-    REQUEST_DELAY,
     LOG_LEVEL,
     LOG_FORMAT,
 )
@@ -60,36 +59,32 @@ def fetch_world_data() -> dict[str, str]:
 
 
 def fetch_market_values(world_name: str) -> list[dict]:
-    """Fetch current market snapshot for a single world (paginates automatically)."""
-    all_items: list[dict] = []
-    skip = 0
-    page_size = 5000
-    
+    """Fetch the current market snapshot for a single world."""
+    page_size = 10000
+
     logger.debug(f"Fetching market values for {world_name}")
-    
-    while True:
-        try:
-            resp = requests.get(
-                f"{TIBIA_MARKET_API_URL}/market_values",
-                params={"server": world_name, "skip": skip, "limit": page_size},
-                timeout=REQUEST_TIMEOUT * 2,  # Longer timeout for large requests
-            )
-            resp.raise_for_status()
-            page = resp.json()
-            all_items.extend(page)
-            
-            logger.debug(f"Fetched page: {len(page)} items (skip={skip})")
-            
-            if len(page) < page_size:
-                break
-            skip += page_size
-            
-        except requests.RequestException as e:
-            logger.error(f"Failed to fetch market values for {world_name} at skip={skip}: {e}")
-            raise
-    
-    logger.info(f"Fetched {len(all_items)} total items for {world_name}")
-    return all_items
+
+    try:
+        resp = requests.get(
+            f"{TIBIA_MARKET_API_URL}/market_values",
+            params={"server": world_name, "skip": 0, "limit": page_size},
+            timeout=REQUEST_TIMEOUT * 2,  # Longer timeout for large requests
+        )
+        resp.raise_for_status()
+        items = resp.json()
+        logger.debug(f"Fetched {len(items)} items (skip=0)")
+    except requests.RequestException as e:
+        logger.error(f"Failed to fetch market values for {world_name}: {e}")
+        raise
+
+    if len(items) == page_size:
+        logger.warning(
+            f"Fetched exactly page_size ({page_size}) items for {world_name}; "
+            "results may be truncated. Consider increasing page_size."
+        )
+
+    logger.info(f"Fetched {len(items)} total items for {world_name}")
+    return items
 
 
 def select_servers(conn, args) -> list[sqlite3.Row]:
@@ -146,19 +141,60 @@ def select_servers(conn, args) -> list[sqlite3.Row]:
 def fetch_item_metadata(item_ids: set[int]) -> list[dict]:
     """Fetch metadata for a set of item IDs from the item_metadata endpoint."""
     results = []
+    max_retries = 3
+    metadata_request_delay = 13
+    hourly_request_limit = 100
+    hourly_window = 60 * 60
+    request_times = []
+
     for item_id in item_ids:
-        try:
-            resp = requests.get(
-                f"{TIBIA_MARKET_API_URL}/item_metadata",
-                params={"item_id": item_id},
-                timeout=REQUEST_TIMEOUT,
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            if data:
-                results.extend(data)
-        except requests.RequestException as e:
-            logger.warning(f"Failed to fetch metadata for item_id={item_id}: {e}")
+        for attempt in range(max_retries + 1):
+            now = time.monotonic()
+            request_times[:] = [timestamp for timestamp in request_times if now - timestamp < hourly_window]
+
+            if len(request_times) >= hourly_request_limit:
+                wait_seconds = hourly_window - (now - request_times[0])
+                logger.info(
+                    f"Hourly metadata request limit reached; "
+                    f"waiting {wait_seconds:.0f} seconds before item_id={item_id}"
+                )
+                time.sleep(wait_seconds)
+                continue
+
+            if request_times:
+                wait_seconds = metadata_request_delay - (now - request_times[-1])
+                if wait_seconds > 0:
+                    logger.debug(f"Waiting {wait_seconds:.1f} seconds before next metadata request")
+                    time.sleep(wait_seconds)
+
+            request_times.append(time.monotonic())
+
+            try:
+                resp = requests.get(
+                    f"{TIBIA_MARKET_API_URL}/item_metadata",
+                    params={"item_id": item_id},
+                    timeout=REQUEST_TIMEOUT,
+                )
+                if resp.status_code == 429 and attempt < max_retries:
+                    retry_after = resp.headers.get("Retry-After")
+                    server_wait = float(retry_after) if retry_after else 0
+                    wait_seconds = max(metadata_request_delay, server_wait)
+                    logger.warning(
+                        f"Rate limited fetching metadata for item_id={item_id}; "
+                        f"retrying in {wait_seconds:g} seconds"
+                    )
+                    time.sleep(wait_seconds)
+                    continue
+
+                resp.raise_for_status()
+                data = resp.json()
+                if data:
+                    results.extend(data)
+                break
+            except requests.RequestException as e:
+                logger.warning(f"Failed to fetch metadata for item_id={item_id}: {e}")
+                break
+
     return results
 
 
@@ -581,9 +617,6 @@ def _process_fetch(conn, args):
                 logger.error(f"Database error processing {name}: {e}")
                 failed.append(name)
 
-        if i < len(to_fetch) - 1:
-            print(f"Waiting {REQUEST_DELAY} seconds before next request...")
-            time.sleep(REQUEST_DELAY)
 
     print(f"\nDone. Fetched: {fetched}, Skipped: {len(skipped)}, Failed: {len(failed)}")
     logger.info(f"Fetch complete. Fetched: {fetched}, Skipped: {len(skipped)}, Failed: {len(failed)}")

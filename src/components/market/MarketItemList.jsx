@@ -16,11 +16,12 @@ SortIcon.propTypes = {
   sortDir: PropTypes.string.isRequired,
 }
 
-function MarketItemList({ items, total, loading, selectedItem, onSelect, sortBy, sortDir, onSort, currentPage, totalPages, onPageChange }) {
+function MarketItemList({ items, total, loading, selectedItem, onSelect, sortBy, sortDir, onSort, currentPage, totalPages, onPageChange, showNpcSellPrice = false }) {
   const cols = [
     { key: 'name', label: 'Item' },
     { key: 'global_avg_buy', label: 'Avg Buy' },
     { key: 'global_avg_sell', label: 'Avg Sell' },
+    ...(showNpcSellPrice ? [{ key: 'best_npc_buy_price', label: 'NPC Buy' }] : []),
     { key: 'active_servers', label: 'Servers' },
     { key: 'top_activity', label: 'Activity' },
   ]
@@ -52,11 +53,11 @@ function MarketItemList({ items, total, loading, selectedItem, onSelect, sortBy,
           <tbody>
             {loading && items.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-3 py-8 text-center text-gray-500">Loading…</td>
+                <td colSpan={cols.length} className="px-3 py-8 text-center text-gray-500">Loading…</td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-3 py-8 text-center text-gray-500">No items found</td>
+                <td colSpan={cols.length} className="px-3 py-8 text-center text-gray-500">No items found</td>
               </tr>
             ) : (
               items.map((item) => {
@@ -80,6 +81,11 @@ function MarketItemList({ items, total, loading, selectedItem, onSelect, sortBy,
                     <td className="px-3 py-2 text-amber-400 text-right whitespace-nowrap">
                       {fmt(item.global_avg_sell)}
                     </td>
+                    {showNpcSellPrice && (
+                      <td className="px-3 py-2 text-violet-400 text-right whitespace-nowrap">
+                        {fmt(item.best_npc_buy_price)}
+                      </td>
+                    )}
                     <td className="px-3 py-2 text-gray-300 text-right">
                       {item.active_servers}
                     </td>
@@ -131,6 +137,7 @@ MarketItemList.propTypes = {
   currentPage: PropTypes.number.isRequired,
   totalPages: PropTypes.number.isRequired,
   onPageChange: PropTypes.func.isRequired,
+  showNpcSellPrice: PropTypes.bool,
 }
 
 export default MarketItemList

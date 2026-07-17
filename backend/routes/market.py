@@ -12,6 +12,23 @@ logger = logging.getLogger(__name__)
 
 market_bp = Blueprint('market', __name__)
 
+# Pre-aggregates the average Tibia Coin buy/sell price per server once, so
+# per-item queries can look up tc_avg_buy/tc_avg_sell via a join instead of
+# re-running a correlated subquery for every output row.
+TC_PRICES_CTE = """
+    WITH tc_prices AS (
+        SELECT
+            tc.server_id,
+            AVG(NULLIF(tc.buy_offer, 0)) AS tc_avg_buy,
+            AVG(NULLIF(tc.sell_offer, 0)) AS tc_avg_sell
+        FROM market_current tc
+        WHERE tc.item_id IN (
+            SELECT id FROM items WHERE name LIKE '%tibia coin%'
+        )
+        GROUP BY tc.server_id
+    )
+"""
+
 
 @market_bp.route('/api/market/current', methods=['GET'])
 def get_market_current():
@@ -154,6 +171,7 @@ def get_item_servers():
                 filters += " AND (s.notes IS NULL OR s.notes != 'blocked')"
 
             cursor = conn.execute(f"""
+                {TC_PRICES_CTE}
                 SELECT
                     s.id as server_id,
                     s.name as server_name,
@@ -161,10 +179,13 @@ def get_item_servers():
                     s.battleye,
                     COALESCE(mc.buy_offer, 0) as buy_offer,
                     COALESCE(mc.sell_offer, 0) as sell_offer,
+                    ROUND(mc.buy_offer / NULLIF(tc_prices.tc_avg_sell, 0), 2) AS tc_buy_offer,
+                    ROUND(mc.sell_offer / NULLIF(tc_prices.tc_avg_buy, 0), 2) AS tc_sell_offer,
                     COALESCE(mc.buy_offers, 0) as buy_offers,
                     COALESCE(mc.sell_offers, 0) as sell_offers
                 FROM market_current mc
                 JOIN servers s ON s.id = mc.server_id
+                LEFT JOIN tc_prices ON tc_prices.server_id = mc.server_id
                 WHERE mc.item_id = ?
                   {filters}
                 ORDER BY mc.buy_offer DESC
@@ -224,6 +245,7 @@ def get_server_items():
                 params.append(category)
 
             cursor = conn.execute(f"""
+                {TC_PRICES_CTE}
                 SELECT
                     i.id AS item_id,
                     i.name,
@@ -232,12 +254,15 @@ def get_server_items():
                     i.best_npc_sell_price,
                     COALESCE(mc.buy_offer, 0) AS buy_offer,
                     COALESCE(mc.sell_offer, 0) AS sell_offer,
+                    ROUND(mc.buy_offer / NULLIF(tc_prices.tc_avg_sell, 0), 2) AS tc_buy_offer,
+                    ROUND(mc.sell_offer / NULLIF(tc_prices.tc_avg_buy, 0), 2) AS tc_sell_offer,
                     COALESCE(mc.buy_offers, 0) AS buy_offers,
                     COALESCE(mc.sell_offers, 0) AS sell_offers,
                     COALESCE(ms.global_avg_sell, 0) AS global_avg_sell
                 FROM market_current mc
                 JOIN items i ON i.id = mc.item_id
                 LEFT JOIN market_summary ms ON ms.item_id = mc.item_id
+                LEFT JOIN tc_prices ON tc_prices.server_id = mc.server_id
                 {where}
                 ORDER BY {sort_col} {sort_dir.upper()}
             """, params)
@@ -273,6 +298,7 @@ def browse_market():
     """
     search = request.args.get('search', '').strip()
     category = request.args.get('category', '').strip()
+    mode = request.args.get('mode', 'global').strip().lower()
     pvp_type = request.args.get('pvp_type', '').strip()
     battleye = request.args.get('battleye', '').strip()
     exclude_blocked = request.args.get('exclude_blocked', 'false').strip().lower() == 'true'
@@ -281,11 +307,16 @@ def browse_market():
     limit = request.args.get('limit', 100, type=int)
     offset = request.args.get('offset', 0, type=int)
 
-    ALLOWED_SORT = {'name', 'global_avg_buy', 'global_avg_sell', 'active_servers', 'top_activity'}
+    if mode not in ('global', 'weekly_delivery'):
+        mode = 'global'
+
+    ALLOWED_SORT = {'name', 'global_avg_buy', 'global_avg_sell', 'active_servers', 'top_activity', 'best_npc_buy_price'}
     if sort_by not in ALLOWED_SORT:
         sort_by = 'top_activity'
     if sort_dir not in ('asc', 'desc'):
         sort_dir = 'desc'
+
+    item_scope = "EXISTS (SELECT 1 FROM weekly_delivery_items wdi WHERE wdi.item_id = i.id AND wdi.is_active = 1)" if mode == 'weekly_delivery' else '1=1'
 
     try:
         with get_db() as conn:
@@ -328,11 +359,11 @@ def browse_market():
                         COALESCE(agg.top_activity, 0) AS top_activity
                     FROM items i
                     LEFT JOIN ({subquery}) agg ON agg.item_id = i.id
-                    WHERE 1=1
+                    WHERE {item_scope}
                 """
                 params = server_params[:]
             else:
-                query = """
+                query = f"""
                     SELECT
                         i.id AS item_id,
                         i.name,
@@ -346,7 +377,7 @@ def browse_market():
                         COALESCE(ms.top_activity, 0) AS top_activity
                     FROM items i
                     LEFT JOIN market_summary ms ON ms.item_id = i.id
-                    WHERE 1=1
+                    WHERE {item_scope}
                 """
                 params = []
 

@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed — Market Browser Request State
+
+- Prevented aborted or superseded market requests from incorrectly clearing the latest loading state or replacing current errors and results
+- Cleared dependent market detail data when a new item, server, search, category, or sort request begins
+- Hid stale market rows while updated detail data is loading or has failed
+
+### Fixed — Weekly Delivery NPC Price Column
+
+- **`src/components/market/MarketItemList.jsx`** — corrected the Weekly Delivery mode column label to "NPC Buy" (was mislabeled "NPC Sell" while showing `best_npc_buy_price`)
+- **`backend/routes/market.py`** — `browse_market`'s `ALLOWED_SORT` now accepts `best_npc_buy_price` (was `best_npc_sell_price`), so sorting by that column actually applies instead of silently falling back to `top_activity`
+
+### Changed — Market Query Performance
+
+- **`backend/routes/market.py`** — `get_item_servers` and `get_server_items` now compute the average Tibia Coin buy/sell price once per query via a shared `TC_PRICES_CTE` and join, instead of re-running a correlated subquery for every output row
+
+### Fixed — Market Data Fetch Truncation
+
+- **`scripts/fetch_market.py`** — raised `fetch_market_values` `page_size` from 5000 to 10000 after confirming live worlds (e.g. Antica, 5041 items) already exceeded the old cap, causing silent data truncation; added a warning log if the page size is ever hit again
+- Removed the now-unused `REQUEST_DELAY` import left over from a prior change
+
 ## [0.7.0] - 2026-06-27
 
 ### Added — Market Browser (`src/pages/MarketBrowser.jsx`)
