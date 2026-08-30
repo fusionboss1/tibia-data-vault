@@ -7,6 +7,7 @@ import WeeklyDelivery from './pages/WeeklyDelivery'
 import Inventory from './pages/Inventory'
 import BountyCalculator from './pages/BountyCalculator'
 import MarketBrowser from './pages/MarketBrowser'
+import TransferPlanner from './pages/TransferPlanner'
 import { isFeatureEnabled } from './constants/features'
 import { ServersProvider } from './contexts/ServersContext'
 
@@ -42,6 +43,9 @@ function App() {
           )}
           {isFeatureEnabled('MARKET_BROWSER') && mountedPages.has('market') && (
             <div className={currentPage === 'market' ? 'h-full' : 'hidden'}><MarketBrowser /></div>
+          )}
+          {isFeatureEnabled('TRANSFER_PLANNER') && mountedPages.has('transfer') && (
+            <div className={currentPage === 'transfer' ? '' : 'hidden'}><TransferPlanner /></div>
           )}
         </div>
       </div>

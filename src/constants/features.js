@@ -12,6 +12,7 @@ export const FEATURES = {
   INVENTORY: true,  // Stash Inventory - still in development
   BOUNTY_CALCULATOR: true,
   MARKET_BROWSER: true,
+  TRANSFER_PLANNER: true,
 }
 
 /**

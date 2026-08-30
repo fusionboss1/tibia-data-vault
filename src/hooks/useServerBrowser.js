@@ -6,7 +6,7 @@ import { useDebounce } from './useDebounce'
 // Retro Hardcore can transfer to all below it; Optional can only transfer to Optional
 const PVP_ORDER = ['Retro Hardcore PvP', 'Hardcore PvP', 'Retro Open PvP', 'Open PvP', 'Optional PvP']
 
-const canTransfer = (src, dst) => {
+export const canTransfer = (src, dst) => {
   const srcPvp = PVP_ORDER.indexOf(src.pvp_type)
   const dstPvp = PVP_ORDER.indexOf(dst.pvp_type)
   if (srcPvp === -1 || dstPvp === -1) return false

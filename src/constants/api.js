@@ -2,6 +2,7 @@ export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:50
 
 export const API_ENDPOINTS = {
   SERVERS: '/api/servers',
+  ITEMS: '/api/items',
   MARKET_GLOBAL: '/api/market/global-key-items',
   MARKET_ITEM_SERVERS: '/api/market/item-servers',
   MARKET_BROWSE: '/api/market/browse',
@@ -9,6 +10,8 @@ export const API_ENDPOINTS = {
   MARKET_SERVER_ITEMS: '/api/market/server-items',
   DELIVERY_ITEMS: '/api/delivery/items',
   EXPORT_OPPORTUNITIES: '/api/export/opportunities',
+  SOURCE_OPPORTUNITIES: '/api/export/source-opportunities',
+  TRANSFERS: '/api/transfers',
   EXPORT_STASH_PLAN: '/api/export/stash-plan',
   INVENTORY: '/api/inventory',
   INVENTORY_CATEGORIES: '/api/inventory/categories',

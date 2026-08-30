@@ -29,6 +29,7 @@ from backend.routes.market import market_bp
 from backend.routes.delivery import delivery_bp
 from backend.routes.export import export_bp
 from backend.routes.inventory import inventory_bp
+from backend.routes.transfers import transfers_bp
 
 # Configure logging
 logging.basicConfig(level=getattr(logging, LOG_LEVEL), format=LOG_FORMAT)
@@ -78,6 +79,7 @@ app.register_blueprint(market_bp)
 app.register_blueprint(delivery_bp)
 app.register_blueprint(export_bp)
 app.register_blueprint(inventory_bp)
+app.register_blueprint(transfers_bp)
 
 
 # =============================================================================
