@@ -30,6 +30,8 @@ export const useTransferPlanner = () => {
   const [items, setItems] = useState([])
   const [itemSearch, setItemSearch] = useState('')
   const [itemResults, setItemResults] = useState([])
+  const [weeklyDeliveryOnly, setWeeklyDeliveryOnly] = useState(false)
+  const [weeklyDeliveryItemIds, setWeeklyDeliveryItemIds] = useState(() => new Set())
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState(null)
   const [addingItemId, setAddingItemId] = useState(null)
@@ -53,6 +55,18 @@ export const useTransferPlanner = () => {
   useEffect(() => {
     refreshSavedPlans().catch(error => setPersistenceError(error.message))
   }, [refreshSavedPlans])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    fetch(`${API_BASE_URL}${API_ENDPOINTS.DELIVERY_ITEMS}`, { signal: controller.signal })
+      .then(response => response.ok ? response.json() : null)
+      .then(result => {
+        const ids = (result?.data?.delivery_items || []).map(item => item.item_id)
+        setWeeklyDeliveryItemIds(new Set(ids))
+      })
+      .catch(error => { if (error.name !== 'AbortError') setWeeklyDeliveryItemIds(new Set()) })
+    return () => controller.abort()
+  }, [])
 
   useEffect(() => {
     if (loadingPlanRef.current) return
@@ -88,7 +102,8 @@ export const useTransferPlanner = () => {
         const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.ITEMS}?${params}`, { signal: controller.signal })
         if (!response.ok) throw new Error('Failed to search items')
         const result = await response.json()
-        setItemResults(result.data?.items || [])
+        const found = result.data?.items || []
+        setItemResults(weeklyDeliveryOnly ? found.filter(item => weeklyDeliveryItemIds.has(item.id)) : found)
       } catch (error) {
         if (error.name === 'AbortError') return
         setItemResults([])
@@ -99,7 +114,7 @@ export const useTransferPlanner = () => {
     }
     fetchItems()
     return () => controller.abort()
-  }, [debouncedSearch])
+  }, [debouncedSearch, weeklyDeliveryOnly, weeklyDeliveryItemIds])
 
   useEffect(() => {
     if (!itemIds) return
@@ -306,6 +321,7 @@ export const useTransferPlanner = () => {
     planId, planName, setPlanName, planStatus, setPlanStatus,
     savedPlans, saving, persistenceError,
     items, itemSearch, setItemSearch, itemResults, searching, searchError, addingItemId,
+    weeklyDeliveryOnly, setWeeklyDeliveryOnly, weeklyDeliveryItemIds,
     addItem, updateItem, removeItem, applyDestinationStrategy,
     savePlan, loadPlan, newPlan, totals,
   }

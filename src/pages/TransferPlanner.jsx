@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
-import { ArrowRightLeft, CheckCircle2, AlertTriangle, ChevronDown, Database, FilePlus, Globe, Loader2, Plus, Save, Search, Trash2 } from 'lucide-react'
+import { ArrowRightLeft, CheckCircle2, AlertTriangle, ChevronDown, Database, FilePlus, Globe, Loader2, Package, Plus, Save, Search, Trash2 } from 'lucide-react'
 import { useServersContext } from '../contexts/ServersContext'
 import { canTransfer } from '../hooks/useServerBrowser'
 import { useTransferPlanner } from '../hooks/useTransferPlanner'
@@ -451,18 +451,31 @@ function TransferPlanner() {
             <button onClick={() => setShowTc(false)} className={`rounded px-2 py-0.5 ${!showTc ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}>gp</button>
             <button onClick={() => setShowTc(true)} className={`rounded px-2 py-0.5 ${showTc ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}>TC</button>
           </div>
+          <button
+            onClick={() => planner.setWeeklyDeliveryOnly(value => !value)}
+            title="Only show items from the weekly delivery pool"
+            className={`flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium ${planner.weeklyDeliveryOnly ? 'border-amber-500 bg-amber-500/15 text-amber-300' : 'border-gray-600 text-gray-400 hover:text-white'}`}
+          >
+            <Package className="h-3.5 w-3.5" /> Weekly delivery
+          </button>
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-2 top-1.5 h-3.5 w-3.5 text-gray-500" />
             <input value={planner.itemSearch} onChange={event => planner.setItemSearch(event.target.value)} placeholder="Search database items…" className={`${inputClass} pl-7`} />
             {planner.searching && <Loader2 className="absolute right-2 top-1.5 h-3.5 w-3.5 animate-spin text-blue-400" />}
             {planner.itemResults.length > 0 && (
               <div className="absolute right-0 top-full z-20 mt-1 max-h-72 w-full overflow-auto rounded-md border border-gray-600 bg-gray-700 shadow-xl">
-                {planner.itemResults.map(item => (
-                  <button key={item.id} onClick={() => planner.addItem(item)} disabled={planner.addingItemId === item.id} className="flex w-full items-center justify-between gap-2 border-b border-gray-600 px-2 py-1.5 text-left last:border-0 hover:bg-gray-600 disabled:opacity-50">
-                    <span><span className="block text-xs text-white">{item.name}</span><span className="text-[11px] text-gray-400">{item.category}</span></span>
-                    {planner.addingItemId === item.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5 text-blue-400" />}
-                  </button>
-                ))}
+                {planner.itemResults.map(item => {
+                  const isWeeklyDelivery = planner.weeklyDeliveryItemIds.has(item.id)
+                  return (
+                    <button key={item.id} onClick={() => planner.addItem(item)} disabled={planner.addingItemId === item.id} className={`flex w-full items-center justify-between gap-2 border-b border-gray-600 px-2 py-1.5 text-left last:border-0 hover:bg-gray-600 disabled:opacity-50 ${isWeeklyDelivery ? 'bg-amber-500/10' : ''}`}>
+                      <span className="flex items-center gap-1.5">
+                        {isWeeklyDelivery && <Package className="h-3 w-3 shrink-0 text-amber-400" />}
+                        <span><span className="block text-xs text-white">{item.name}</span><span className="text-[11px] text-gray-400">{item.category}</span></span>
+                      </span>
+                      {planner.addingItemId === item.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5 text-blue-400" />}
+                    </button>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -498,8 +511,9 @@ function TransferPlanner() {
                   const destBuyTc = Number(planner.destinationTcPrice) ? (Number(item.destinationBuyOffer) || 0) / Number(planner.destinationTcPrice) : 0
                   const destSellTc = Number(planner.destinationTcPrice) ? (Number(item.destinationSellOffer) || 0) / Number(planner.destinationTcPrice) : 0
                   const actualSaleTc = Number(planner.destinationTcPrice) ? (Number(item.actualSalePrice) || 0) / Number(planner.destinationTcPrice) : 0
+                  const isWeeklyDelivery = planner.weeklyDeliveryItemIds.has(item.itemId)
                   return (
-                    <tr key={item.itemId} className="align-top hover:bg-gray-750/50">
+                    <tr key={item.itemId} className={`align-top hover:bg-gray-750/50 ${isWeeklyDelivery ? 'bg-amber-500/5' : ''}`}>
                       <td className="border border-gray-700 px-3 py-0.5">
                         <div className="flex items-center gap-1.5">
                           <button
@@ -509,6 +523,7 @@ function TransferPlanner() {
                           >
                             <Globe className="h-3.5 w-3.5" />
                           </button>
+                          {isWeeklyDelivery && <Package className="h-3.5 w-3.5 shrink-0 text-amber-400" />}
                           <div className="max-w-[160px] truncate text-xs font-medium text-white" title={item.name}>{item.name}</div>
                         </div>
                       </td>
