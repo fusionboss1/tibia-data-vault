@@ -18,6 +18,7 @@ function Inventory() {
     selectedServerId, setSelectedServerId,
     weeklyOnly, setWeeklyOnly,
     fetchInventory, handleImport,
+    wiping, handleWipe,
   } = useInventory()
   const { servers } = useServersContext()
 
@@ -54,6 +55,8 @@ function Inventory() {
         selectedServerId={selectedServerId} onServerId={setSelectedServerId} servers={servers}
         loading={loading} onRefresh={fetchInventory}
         onImport={() => { setShowImport(true); setImportResult(null) }}
+        onWipe={handleWipe}
+        wiping={wiping}
       />
 
       {!loading && inventory.length === 0 && (

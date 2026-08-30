@@ -197,6 +197,27 @@ def import_inventory():
         raise
 
 
+@inventory_bp.route('/api/inventory', methods=['DELETE'])
+def wipe_inventory():
+    """Delete every row from the stash_inventory table."""
+    try:
+        with get_db() as conn:
+            cursor = conn.execute("DELETE FROM stash_inventory")
+            deleted = cursor.rowcount
+            conn.commit()
+
+        response = ApiResponse(
+            success=True,
+            data={"deleted": deleted},
+            message=f"Wiped {deleted} stash item{'' if deleted == 1 else 's'}"
+        )
+        return jsonify(response.model_dump()), 200
+
+    except sqlite3.Error as e:
+        logger.error(f"Database error in wipe_inventory: {e}")
+        raise
+
+
 @inventory_bp.route('/api/inventory/categories', methods=['GET'])
 def get_inventory_categories():
     """Get distinct item categories present in the current stash."""

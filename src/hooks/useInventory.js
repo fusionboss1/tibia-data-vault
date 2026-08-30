@@ -11,6 +11,7 @@ export const useInventory = () => {
   const [showImport, setShowImport] = useState(false)
   const [importResult, setImportResult] = useState(null)
   const [error, setError] = useState(null)
+  const [wiping, setWiping] = useState(false)
 
   const [selectedCategory, setSelectedCategory] = useState('')
   const [selectedServerId, setSelectedServerId] = useState('')
@@ -86,6 +87,32 @@ export const useInventory = () => {
     }
   }
 
+  const handleWipe = useCallback(async () => {
+    const confirmed = window.confirm(
+      'Are you sure you want to wipe your entire stash? This cannot be undone.'
+    )
+    if (!confirmed) return
+
+    setWiping(true)
+    setError(null)
+    try {
+      const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.INVENTORY}`, {
+        method: 'DELETE',
+      })
+      const json = await res.json()
+      if (json.success) {
+        await fetchInventory()
+        await fetchCategories()
+      } else {
+        setError(json.error || 'Failed to wipe stash')
+      }
+    } catch {
+      setError('Could not reach the API')
+    } finally {
+      setWiping(false)
+    }
+  }, [fetchInventory, fetchCategories])
+
   return {
     inventory, categories,
     total,
@@ -98,5 +125,6 @@ export const useInventory = () => {
     selectedServerId, setSelectedServerId,
     weeklyOnly, setWeeklyOnly,
     fetchInventory, handleImport,
+    wiping, handleWipe,
   }
 }

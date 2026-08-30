@@ -21,6 +21,7 @@ function GlobalView({ mode = 'global' }) {
     pvpType, setPvpType,
     battleye, setBattleye,
     excludeBlocked, setExcludeBlocked,
+    yasirOnly, setYasirOnly,
     sortBy, sortDir, handleSort,
     offset, setOffset,
     items, total, loading, error,
@@ -31,7 +32,7 @@ function GlobalView({ mode = 'global' }) {
     PAGE_SIZE, totalPages, currentPage,
   } = useMarketBrowser(mode)
 
-  const hasActiveFilters = search || category || pvpType || battleye || excludeBlocked
+  const hasActiveFilters = search || category || pvpType || battleye || excludeBlocked || yasirOnly
 
   return (
     <>
@@ -89,8 +90,13 @@ function GlobalView({ mode = 'global' }) {
             <span className="text-xs text-gray-400">Exclude blocked</span>
           </label>
 
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input type="checkbox" checked={yasirOnly} onChange={(e) => setYasirOnly(e.target.checked)} className="w-3.5 h-3.5 rounded accent-emerald-500" />
+            <span className="text-xs text-gray-400">Yasir only</span>
+          </label>
+
           {hasActiveFilters && (
-            <button onClick={() => { setSearch(''); setCategory(''); setPvpType(''); setBattleye(''); setExcludeBlocked(false) }} className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1">
+            <button onClick={() => { setSearch(''); setCategory(''); setPvpType(''); setBattleye(''); setExcludeBlocked(false); setYasirOnly(false) }} className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1">
               <X className="w-3 h-3" /> Clear
             </button>
           )}

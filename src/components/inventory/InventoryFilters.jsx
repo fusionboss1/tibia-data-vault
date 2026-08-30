@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types'
-import { Search, RefreshCw, Upload } from 'lucide-react'
+import { Search, RefreshCw, Upload, Trash2 } from 'lucide-react'
 
 function InventoryFilters({
   search, onSearch,
@@ -8,6 +8,8 @@ function InventoryFilters({
   selectedServerId, onServerId, servers,
   loading, onRefresh,
   onImport,
+  onWipe,
+  wiping,
 }) {
   return (
     <div className="flex gap-3 mb-6 flex-wrap">
@@ -64,6 +66,15 @@ function InventoryFilters({
         <Upload className="w-4 h-4" />
         Import Log
       </button>
+      <button
+        onClick={onWipe}
+        disabled={wiping || loading}
+        className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:bg-red-900 text-white px-4 py-2 rounded-lg transition-colors"
+        title="Wipe stash"
+      >
+        <Trash2 className={`w-4 h-4 ${wiping ? 'animate-spin' : ''}`} />
+        Wipe
+      </button>
     </div>
   )
 }
@@ -82,6 +93,8 @@ InventoryFilters.propTypes = {
   loading: PropTypes.bool.isRequired,
   onRefresh: PropTypes.func.isRequired,
   onImport: PropTypes.func.isRequired,
+  onWipe: PropTypes.func.isRequired,
+  wiping: PropTypes.bool.isRequired,
 }
 
 export default InventoryFilters

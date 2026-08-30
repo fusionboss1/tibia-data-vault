@@ -10,6 +10,7 @@ export const useMarketBrowser = (mode = 'global') => {
   const [pvpType, setPvpType] = useState('')
   const [battleye, setBattleye] = useState('')
   const [excludeBlocked, setExcludeBlocked] = useState(false)
+  const [yasirOnly, setYasirOnly] = useState(false)
   const [sortBy, setSortBy] = useState('top_activity')
   const [sortDir, setSortDir] = useState('desc')
   const [offset, setOffset] = useState(0)
@@ -30,7 +31,7 @@ export const useMarketBrowser = (mode = 'global') => {
 
   useEffect(() => { setOffset(0) }, [search])
 
-  useEffect(() => { setOffset(0) }, [category, pvpType, battleye, excludeBlocked, sortBy, sortDir])
+  useEffect(() => { setOffset(0) }, [category, pvpType, battleye, excludeBlocked, yasirOnly, sortBy, sortDir])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -46,6 +47,7 @@ export const useMarketBrowser = (mode = 'global') => {
         if (pvpType) params.set('pvp_type', pvpType)
         if (battleye) params.set('battleye', battleye)
         if (excludeBlocked) params.set('exclude_blocked', 'true')
+        if (yasirOnly) params.set('yasir_only', 'true')
         params.set('mode', mode)
         params.set('sort_by', sortBy)
         params.set('sort_dir', sortDir)
@@ -77,7 +79,7 @@ export const useMarketBrowser = (mode = 'global') => {
       isActive = false
       controller.abort()
     }
-  }, [debouncedSearch, category, pvpType, battleye, excludeBlocked, sortBy, sortDir, offset, mode])
+  }, [debouncedSearch, category, pvpType, battleye, excludeBlocked, yasirOnly, sortBy, sortDir, offset, mode])
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -166,6 +168,7 @@ export const useMarketBrowser = (mode = 'global') => {
     pvpType, setPvpType,
     battleye, setBattleye,
     excludeBlocked, setExcludeBlocked,
+    yasirOnly, setYasirOnly,
     sortBy, sortDir, handleSort,
     offset, setOffset,
     items, total, loading, error,

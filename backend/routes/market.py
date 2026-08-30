@@ -181,6 +181,8 @@ def get_item_servers():
                     COALESCE(mc.sell_offer, 0) as sell_offer,
                     ROUND(mc.buy_offer / NULLIF(tc_prices.tc_avg_sell, 0), 2) AS tc_buy_offer,
                     ROUND(mc.sell_offer / NULLIF(tc_prices.tc_avg_buy, 0), 2) AS tc_sell_offer,
+                    ROUND(tc_prices.tc_avg_buy, 0) AS tc_buy_price,
+                    ROUND(tc_prices.tc_avg_sell, 0) AS tc_sell_price,
                     COALESCE(mc.buy_offers, 0) as buy_offers,
                     COALESCE(mc.sell_offers, 0) as sell_offers
                 FROM market_current mc
@@ -291,6 +293,7 @@ def browse_market():
     - pvp_type: Filter summary averages by server PvP type
     - battleye: Filter summary averages by BattlEye status (Green/Yellow)
     - exclude_blocked: If 'true', excludes blocked servers from averages
+    - yasir_only: If 'true', only shows items that can only be sold to Yasir
     - sort_by: Column to sort by (name, global_avg_buy, global_avg_sell, active_servers, top_activity). Default: top_activity
     - sort_dir: asc or desc. Default: desc
     - limit: Page size (default 100)
@@ -302,6 +305,7 @@ def browse_market():
     pvp_type = request.args.get('pvp_type', '').strip()
     battleye = request.args.get('battleye', '').strip()
     exclude_blocked = request.args.get('exclude_blocked', 'false').strip().lower() == 'true'
+    yasir_only = request.args.get('yasir_only', 'false').strip().lower() == 'true'
     sort_by = request.args.get('sort_by', 'top_activity').strip()
     sort_dir = request.args.get('sort_dir', 'desc').strip().lower()
     limit = request.args.get('limit', 100, type=int)
@@ -387,6 +391,8 @@ def browse_market():
             if category:
                 query += " AND i.category = ?"
                 params.append(category)
+            if yasir_only:
+                query += " AND i.best_npc_buy_npcs = '[\"Yasir\"]'"
 
             sort_col = sort_by if sort_by != 'name' else 'i.name'
 
